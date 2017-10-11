@@ -1,72 +1,106 @@
-exports.initialize = () => {
+exports.initialize = (app) => {
+	const emitter = app.emitter;
 
 	const API = Object.create(null);
+
+	function warn(err) {
+		emitter.emit(`warn`, err);
+	}
 
 	API.createTransaction = function createTransaction() {
 		const TXN = Object.create(null);
 
+		const transactionErrors = [];
+
+		const transactionCache = createTransactionCache();
+
 		TXN.get = function get(args) {
 			const {scope, type, id, include} = args;
 
-			return getObject(scope, key, {resetCache: true})
-				.then((obj) => {
-					if (!obj) return null;
+			// Fetch the object, resetting the cache if there is a cache miss
+			// on the get.
+			return getObject(scope, key, {resetCache: true}).then((obj) => {
+				// Return null if not found.
+				if (!obj) return null;
 
-					if (obj.relationships && include && include.length > 0) {
-						const keys = include.reduce((keys, rname) => {
-							return keys.concat(obj.relationships[rname] || []);
-						}, []);
+				// Set the item in the transaction cache in case it's used again during
+				// the transaction.
+				transactionCache.set(obj);
 
-						if (keys.length > 0) {
-							return batchGetObjects(scope, keys, {resetCache: true}).then((items) => {
-								items = items.filter((item, i) => {
-									if (!item) {
-										const {type, id} = keys[i];
-										warn(new InvariantError(
-											`Rynodb corrupt data: No resource "${type}.${id}" but found in relationships`
-										));
-									}
+				// Handle an includes query.
+				if (obj.relationships && include && include.length > 0) {
 
-									return Boolean(item);
-								});
+					// Aggregate the object keys we'll need to fetch.
+					const keys = include.reduce((keys, rname) => {
+						return keys.concat(obj.relationships[rname] || []);
+					}, []);
 
-								return {
-									resource: createReturnObject(obj),
-									included: items.map(createReturnObject)
-								};
+					// If there aren't any keys to fetch, just fall through to the bottom.
+					// return statement.
+					if (keys.length > 0) {
+
+						// Fetch the objects in batch mode, resetting the cache if there is
+						// a cache miss on the get.
+						return batchGetObjects(scope, keys, {resetCache: true}).then((items) => {
+							items = items.filter((item, i) => {
+								if (!item) {
+									const key = keys[i];
+									warn(new InvariantError(
+										`Rynodb corrupt data: Missing resource ${key.type}.${key.id} but referenced in ${type}.${id} relationships`
+									));
+								}
+
+
+								// Set each item in the transaction cache in case it's used
+								// again during the transaction.
+								transactionCache.set(item);
+								return Boolean(item);
 							});
-						}
-					}
 
-					return {resource: createReturnObject(obj)}
-				})
-				.catch((err) => {
-					return Promise.reject(new VError(
-						err,
-						`Error in Rynodb Transaction#get()`
-					));
-				});
+							return {
+								resource: createReturnObject(obj),
+								included: items.map(createReturnObject)
+							};
+						});
+					}
+				}
+
+				// No includes query? Just return the resource object.
+				return {resource: createReturnObject(obj), included: []};
+			}).catch((err) => {
+				transactionErrors.push(new VError(err, `Error in Rynodb Transaction#get()`));
+				return null;
+			});
 		};
 
 		TXN.set = function set(scope, obj) {
 			const {type, id} = obj;
 
+			// Check the transaction cache for this object so we can get the delta
+			// for relationship and index updates.
 			const oldObject = transactionCache.get(scope, type, id);
-			const oldRelationships = oldObject ? oldObject.relationships : {};
 
 			return setObject(scope, obj)
-				.then((obj) => {
+				.then((newObject) => {
 					return Promise.all([
-						typeIndexObject(scope, obj),
-						addForeignKeyRelationships(scope, oldRelationships, obj),
-						indexObject(scope, obj)
-					]).then(() => obj);
+						// Add the object to the type index so it can be retrieved
+						// using a type scan operation.
+						typeIndexObject(scope, newObject),
+
+						// When an object is updated, we need to determine the foreignKeys
+						// added/removed from the relationships Hash, find each related
+						// object, and update its foreignKeys Set.
+						updateForeignKeys(scope, oldObject, newObject),
+
+						// When an object is created or updated it's index entries may have
+						// changed. We need to determine which entries need to be removed
+						// from indexing, and which need to be added.
+						indexObject(scope, newObject)
+					]).then(() => createReturnObject(newObject));
 				})
 				.catch((err) => {
-					return Promise.reject(new VError(
-						err,
-						`Error in Rynodb Transaction#set()`
-					));
+					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#set()`));
+					return obj;
 				});
 		};
 
@@ -91,10 +125,8 @@ exports.initialize = () => {
 					return true;
 				})
 				.catch((err) => {
-					return Promise.reject(new VError(
-						err,
-						`Error in Rynodb Transaction#remove()`
-					));
+					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#remove()`));
+					return null;
 				});
 		};
 
@@ -119,7 +151,7 @@ exports.initialize = () => {
 							if (!item) {
 								const {type, id} = keys[i];
 								warn(new InvariantError(
-									`Rynodb corrupt data: No resource "${type}.${id}" but found in type scan`
+									`Rynodb corrupt data: Missing resource ${type}.${id} but referenced in type scan index "${redisIndexKey}"`
 								));
 							}
 
@@ -133,24 +165,22 @@ exports.initialize = () => {
 					});
 				})
 				.catch((err) => {
-					return Promise.reject(new VError(
-						err,
-						`Error in Rynodb Transaction#scan()`
-					));
+					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#scan()`));
+					return null;
 				});
 		};
 
 		TXN.query = function query(args) {
-			// throw new Error(`Transaction#query() is not yet implemented`);
-			const {
-				scope,
-				type,
-				indexName,
-				operator,
-				parameters,
-				cursor,
-				limit
-			} = args;
+			throw new Error(`Transaction#query() is not yet implemented`);
+			// const {
+			// 	scope,
+			// 	type,
+			// 	indexName,
+			// 	operator,
+			// 	parameters,
+			// 	cursor,
+			// 	limit
+			// } = args;
 
 			// Document:
 			// {
@@ -168,75 +198,99 @@ exports.initialize = () => {
 			// Index:
 			// HashKey: indexPartitionKey, RangeKey: indexKey
 
-			let KeyConditionExpression = `indexPartitionKey = :pkey `;
-			switch (operator) {
-				case QUERY_OPERATOR_EQUALS:
-					KeyConditionExpression += `indexKey = :ikey`;
-				case QUERY_OPERATOR_BEGINS_WITH:
-					KeyConditionExpression += `begins_with (indexKey, :ikey)`;
-				default:
-					return Promise.reject(new Error(
-						`Rynodb Transaction#query() operator "${operator}" is not yet implemented.`
-					));
-			}
+			// let KeyConditionExpression = `indexPartitionKey = :pkey `;
+			// switch (operator) {
+			// 	case QUERY_OPERATOR_EQUALS:
+			// 		KeyConditionExpression += `indexKey = :ikey`;
+			// 	case QUERY_OPERATOR_BEGINS_WITH:
+			// 		KeyConditionExpression += `begins_with (indexKey, :ikey)`;
+			// 	default:
+			// 		return Promise.reject(new Error(
+			// 			`Rynodb Transaction#query() operator "${operator}" is not yet implemented.`
+			// 		));
+			// }
 
-			return Promise.resolve(null)
-				.then(() => {
-					return dynamodbQuery({
-						TableName: DYNAMODB_QUERY_TABLE_NAME,
-						IndexName: DYNAMODB_QUERY_INDEX_NAME,
-						ExpressionAttributeValues: {
-							':pkey': marshalDDBValue(composeQueryIndexPartitionKey(scope, indexName)),
-							':ikey': marshalDDBValue(parameters[0])
-						},
-						KeyConditionExpression,
-						ExclusiveStartKey: cursor,
-						Limit: limit
-					});
-				})
-				.then((res) => {
-					const {Items, LastEvaluatedKey} = res;
+			// return Promise.resolve(null)
+			// 	.then(() => {
+			// 		return dynamodbQuery({
+			// 			TableName: DYNAMODB_QUERY_TABLE_NAME,
+			// 			IndexName: DYNAMODB_QUERY_INDEX_NAME,
+			// 			ExpressionAttributeValues: {
+			// 				':pkey': marshalDDBValue(composeQueryIndexPartitionKey(scope, indexName)),
+			// 				':ikey': marshalDDBValue(parameters[0])
+			// 			},
+			// 			KeyConditionExpression,
+			// 			ExclusiveStartKey: cursor,
+			// 			Limit: limit
+			// 		});
+			// 	})
+			// 	.then((res) => {
+			// 		const {Items, LastEvaluatedKey} = res;
 
-					const keys = Items.map((doc) => {
-						const {type, id} = unmarshalDDBDocument(doc);
-						return {type, id};
-					});
+			// 		const keys = Items.map((doc) => {
+			// 			const {type, id} = unmarshalDDBDocument(doc);
+			// 			return {type, id};
+			// 		});
 
-					return batchGetObjects(scope, keys).then((items) => {
-						return {
-							items: items.map(createReturnObject),
-							cursor: LastEvaluatedKey
-						};
-					});
-				})
-				.then((res) => {
-					res.items = res.items.filter((item) => {
-						if (!item) {
-							warn(new InvariantError(
-								`Rynodb corrupt data: No resource "${type}.${id}" but found in index "${indexName}"`
-							));
-						}
+			// 		return batchGetObjects(scope, keys).then((items) => {
+			// 			return {
+			// 				items: items.map(createReturnObject),
+			// 				cursor: LastEvaluatedKey
+			// 			};
+			// 		});
+			// 	})
+			// 	.then((res) => {
+			// 		res.items = res.items.filter((item) => {
+			// 			if (!item) {
+			// 				warn(new InvariantError(
+			// 					`Rynodb corrupt data: Missing resource ${type}.${id} but referenced in index "${indexName}"`
+			// 				));
+			// 			}
 
-						return Boolean(item);
-					});
+			// 			return Boolean(item);
+			// 		});
 
-					return res;
-				})
-				.catch((err) => {
-					return Promise.reject(new VError(
-						err,
-						`Error in Rynodb Transaction#query()`
-					));
-				});
+			// 		return res;
+			// 	})
+			// 	.catch((err) => {
+			// 		transactionErrors.push(new VError(err, `Error in Rynodb Transaction#query()`));
+			// 		return null;
+			// 	});
 		};
 
 		TXN.commit = function commit() {
+			if (transactionErrors.length > 0) {
+				// Make a copy of transactionErrors using .slice() to avoid mutation of
+				// the private Array by the caller.
+				return Promise.reject(transactionErrors.slice());
+			}
+
+			return Promise.resolve(true);
 		};
 
 		TXN.rollback = function rollback() {
+			return Promise.resolve(true);
 		};
 
 		return TXN;
+	}
+
+	function createTransactionCache() {
+		const cache = Object.create(null);
+
+		return {
+			get(args) {
+				const {scope, type, id} = args;
+				const key = `${scope}:${type}:${id}`;
+				return cache[key] ? clone(cache[key]) : null;
+			},
+			set(obj) {
+				const {scope, type, id} = obj;
+				const key = `${scope}:${type}:${id}`;
+				cache[key] = clone(obj);
+				return obj;
+			}
+		};
 	}
 
 	function createDBObject(spec) {
@@ -329,148 +383,87 @@ exports.initialize = () => {
 		return redisZADD(indexKey, 0, id);
 	}
 
-	function addForeignKeyRelationships(scope, oldRelationships, obj) {
-		const {type, id, relationships} = obj;
+	// When an object is updated, we need to determine the foreignKeys added/removed from
+	// the relationships Hash, find each related object, and update its foreignKeys
+	// Set.
+	function updateForeignKeys(scope, oldObject, newObject) {
+		const a = oldObject.relationships ? unnest(Object.keys(oldObject.relationships).map((rname) => {
+			return oldObject.relationships[rname];
+		})) : [];
 
-		const a = unnest(Object.keys(oldRelationships).map((rname) => {
-			return oldRelationships[rname];
-		}));
-
-		const b = unnest(Object.keys(relationships).map((rname) => {
-			return relationships[rname];
-		}));
+		const b = newObject.relationships ? unnest(Object.keys(newObject.relationships).map((rname) => {
+			return newObject.relationships[rname];
+		})) : [];
 
 		const toRemove = differenceByKey(a, b);
 		const newlyAdded = differenceByKey(b, a);
 
-		if (keys.length === 0) {
-			return Promise.resolve(true);
-		}
-
-		return batchGetObjects(scope, keys, {skipCache: true}).then((objects) => {
-			const mutatedObjects = compact(objects.map((obj, i) => {
-				if (!obj) {
-					const key = keys[i];
-					warn(new InvariantError(
-						`Rynodb corrupt data: Object ${key.type}:${key.id} referenced in ${type}:${id} not found.`
-					));
-					return null;
-				}
-
-				// TODO: Treat foreignKeys Array as a Set. Ramda?
-			}));
-
-			return batchSetObjects(scope, mutatedObjects);
-		});
+		return Promise.all([
+			removeForeignKeys(scope, type, id, toRemove),
+			addForeignKeys(scope, type, id, newlyAdded)
+		]);
 	}
 
-	// When an object is removed, we need to use it's foreignKeys Set to find all
-	// other objects which reference it and remove the reference from those
-	// objects' relationships Map.
-	//
-	// When an object is added, we need to determine the foreignKeys added/removed from
-	// the relationships Hash, find each related object, and update its foreignKeys
-	// Set.
-
-	function addForeignKeyRelationships(scope, type, id, keys) {
-		if (!keys || keys.length === 0) {
-			return Promise.resolve(true);
-		}
-
+	function removeForeignKeys(scope, type, id, keys) {
 		return batchGetObjects(scope, keys, {skipCache: true})
-			.then((items) => {
-				return items.filter((item, i) => {
-					if (!item) {
-						const {type, id} = keys[i];
+			.then((objects) => {
+				return objects.filter((obj, i) => {
+					if (!obj) {
+						const key = keys[i];
 						warn(new InvariantError(
-							`Rynodb corrupt data: No resource "${type}.${id}" but found in foreignKeys`
+							`Rynodb corrupt data: Missing resource ${key.type}.${key.id} but referenced in ${type}.${id} relationships`
 						));
 					}
 
 					return Boolean(item);
 				});
 			})
-			.then((items) => {
-				const mutatedItems = compact(items.map((item) => {
-					const relationships = item.relationships;
-					if (!relationships) return null;
+			.then((objects) => {
+				const mutatedObjects = objects.map((obj) => {
+					// Clone before mutating.
+					obj = clone(obj);
+					obj.foreignKeys = obj.foreignKeys.filter(keysEqual({type, id}));
+					return obj;
+				});
 
-					// TODO: What's the algo?
-					item.relationships = Object.keys(relationships).reduce((newr, rname) => {
-						newr[rname] = relationships[rname].filter((key) => {
-							return key.type !== type || key.id !== id;
-						});
-						return newr;
-					}, Object.create(null));
-
-					return item;
-				}));
-
-				return batchSetObjects(scope, mutatedItems);
+				return batchSetObjects(scope, mutatedObjects);
 			});
 	}
 
-	function removeForeignKeyRelationships(scope, type, id, keys) {
-		if (!keys || keys.length === 0) {
-			return Promise.resolve(true);
-		}
-
+	function addForeignKeys(scope, type, id, keys) {
 		return batchGetObjects(scope, keys, {skipCache: true})
-			.then((items) => {
-				return items.filter((item, i) => {
-					if (!item) {
-						const {type, id} = keys[i];
+			.then((objects) => {
+				return objects.filter((obj, i) => {
+					if (!obj) {
+						const key = keys[i];
 						warn(new InvariantError(
-							`Rynodb corrupt data: No resource "${type}.${id}" but found in foreignKeys`
+							`Rynodb corrupt data: Missing resource ${key.type}.${key.id} but referenced in ${type}.${id} relationships`
 						));
 					}
 
 					return Boolean(item);
 				});
 			})
-			.then((items) => {
-				const mutatedItems = compact(items.map((item) => {
-					const relationships = item.relationships;
-					if (!relationships) return null;
+			.then((objects) => {
+				const mutatedObjects = objects.map((obj) => {
+					// Clone before mutating.
+					obj = clone(obj);
+					obj.foreignKeys = uniqueByKey(append({type, id}, obj.foreignKeys));
+					return obj;
+				});
 
-					item.relationships = Object.keys(relationships).reduce((newr, rname) => {
-						newr[rname] = relationships[rname].filter((key) => {
-							return key.type !== type || key.id !== id;
-						});
-						return newr;
-					}, Object.create(null));
-
-					return item;
-				}));
-
-				return batchSetObjects(scope, mutatedItems);
+				return batchSetObjects(scope, mutatedObjects);
 			});
 	}
 
+	// When an object is created or updated it's index entries may have changed.
+	// We need to determine which entries need to be removed from indexing, and
+	// which need to be added.
 	function indexObject(scope, obj) {
-		const {type, id, indexEntries} = obj;
+		const {type, id} = obj;
+		const indexEntries = obj.indexEntries ? obj.indexEntries : [];
 
-		if (!indexEntries || indexEntries.length === 0) {
-			return Promise.resolve(true);
-		}
-
-		// Document:
-		// {
-		//  type: `${type}`,
-		//  id: `${id}`,
-		// 	partitionKey: `${scope}:${type}:${id}`,
-		// 	rangeKey: `${indexName}:${indexKey}`,
-		// 	indexPartitionKey: `${scope}:${indexName}`,
-		// 	indexKey: `${indexKey}`
-		// }
-		//
-		// Table:
-		// HashKey: partitionKey, RangeKey: rangeKey
-		//
-		// Index:
-		// HashKey: indexPartitionKey, RangeKey: indexKey
-
-		const entries = unnest(indexEntries.map((entry) => {
+		const newEntries = unnest(indexEntries.map((entry) => {
 			const {indexName, keys} = entry;
 			return keys.map((indexKey) => {
 				return createIndexEntryDocument({
@@ -482,49 +475,23 @@ exports.initialize = () => {
 				});
 			});
 		}));
+
+		const differenceByIndex = differenceWith((a, b) => {
+			return a.indexName === b.indexName && a.indexKey === b.indexKey;
+		});
+
+		return getIndexEntries(scope, type, id).then((currentEntries) => {
+			const toRemove = differenceByIndex(currentEntries, newEntries);
+			const newlyAdded = differenceByIndex(newEntries, currentEntries);
+
+			return Promise.all([
+				removeIndexEntries(toRemove),
+				addIndexEntries(newlyAdded)
+			]);
+		});
 	}
 
-	function removeForeignKeyRelationships(scope, obj) {
-		const {type, id} = obj;
-		const keys = obj.foreignKeys;
-
-		if (!keys || keys.length === 0) {
-			return Promise.resolve(true);
-		}
-
-		return batchGetObjects(scope, keys, {skipCache: true})
-			.then((items) => {
-				return items.filter((item, i) => {
-					if (!item) {
-						const {type, id} = keys[i];
-						warn(new InvariantError(
-							`Rynodb corrupt data: No resource "${type}.${id}" but found in foreignKeys`
-						));
-					}
-
-					return Boolean(item);
-				});
-			})
-			.then((items) => {
-				const mutatedItems = compact(items.map((item) => {
-					const relationships = item.relationships;
-					if (!relationships) return null;
-
-					item.relationships = Object.keys(relationships).reduce((newr, rname) => {
-						newr[rname] = relationships[rname].filter((key) => {
-							return key.type !== type || key.id !== id;
-						});
-						return newr;
-					}, Object.create(null));
-
-					return item;
-				}));
-
-				return batchSetObjects(scope, mutatedItems);
-			});
-	}
-
-	function removeFromQueryTable(scope, type, id) {
+	function getIndexEntries(scope, type, id) {
 		// Document:
 		// {
 		//  type: `${type}`,
@@ -559,22 +526,90 @@ exports.initialize = () => {
 				));
 			}
 
-			const keys = Items.map((doc) => {
-				const {partitionKey, rangeKey} = unmarshalDDBDocument(doc);
-			});
-
-			// var params = {
-			//   Key: {
-			//    "Artist": {
-			//      S: "No One You Know"
-			//     },
-			//    "SongTitle": {
-			//      S: "Scared of My Shadow"
-			//     }
-			//   },
-			//   TableName: "Music"
-			// };
+			return Items.map(unmarshalDDBDocument);
 		});
+	}
+
+	function removeIndexEntries(entries) {
+		const RequestItems = Object.create(null);
+		RequestItems[DYNAMODB_QUERY_TABLE_NAME] = entries.map((entry) => {
+			return {
+				DeleteRequest: {
+					Key: {
+						partitionKey: marshalDDBValue(entry.partitionKey),
+						rangeKey: marshalDDBValue(entry.rangeKey)
+					}
+				}
+			};
+		});
+
+		const params = {RequestItems};
+
+		return dynamodbBatchWriteItem(params);
+	}
+
+	function addIndexEntries(entries) {
+		const RequestItems = Object.create(null);
+		RequestItems[DYNAMODB_QUERY_TABLE_NAME] = entries.map((entry) => {
+			return {
+				PutRequest: {
+					Item: marshalDDBDocument(entry)
+				}
+			};
+		});
+
+		const params = {RequestItems};
+
+		return dynamodbBatchWriteItem(params);
+	}
+
+	// When an object is removed, we need to use it's foreignKeys Set to find all
+	// other objects which reference it and remove the reference from those
+	// objects' relationships Map.
+	function removeForeignKeyRelationships(scope, obj) {
+		const {type, id, foreignKeys} = obj;
+
+		if (!foreignKeys || foreignKeys.length === 0) {
+			return Promise.resolve(true);
+		}
+
+		return batchGetObjects(scope, foreignKeys, {skipCache: true})
+			.then((objects) => {
+				return objects.filter((obj, i) => {
+					if (!obj) {
+						const key = foreignKeys[i];
+						warn(new InvariantError(
+							`Rynodb corrupt data: Missing resource ${key.type}.${key.id} but referenced in ${key.type}.${key.id} foreignKeys`
+						));
+					}
+
+					return Boolean(item);
+				});
+			})
+			.then((objects) => {
+				const mutatedObjects = compact(objects.map((obj) => {
+					const relationships = obj.relationships;
+					if (!relationships) return null;
+
+					// Make a copy before mutating.
+					obj = clone(obj);
+
+					obj.relationships = Object.keys(relationships).reduce((newr, rname) => {
+						newr[rname] = relationships[rname].filter((key) => {
+							return key.type !== type || key.id !== id;
+						});
+						return newr;
+					}, Object.create(null));
+
+					return obj;
+				}));
+
+				return batchSetObjects(scope, mutatedItems);
+			});
+	}
+
+	function removeFromQueryTable(scope, type, id) {
+		return getIndexEntries(scope, type, id).then(removeIndexEntries);
 	}
 
 	function removeFromTypeIndex(scope, type, id) {
@@ -628,6 +663,14 @@ exports.initialize = () => {
 		});
 	}
 
+	function dynamodbQuery() {
+	}
+
+	function dynamodbBatchWriteItem() {
+		// TODO: Handle UnprocessedItems. See:
+		//   http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB.html#batchWriteItem-property
+	}
+
 	function marshalDDBDocument(doc) {
 	}
 
@@ -656,9 +699,12 @@ exports.initialize = () => {
 		return `${scope}:typescan:${type}`;
 	}
 
-	const differenceByKey = differenceWith((a, b) => {
+	const keysEqual = curry(function (a, b) {
 		return a.type === b.type && a.id === b.id;
 	});
+
+	const differenceByKey = differenceWith(keysEqual);
+	const uniqueByKey = uniqWith(keysEqual);
 
 	return API;
 };
