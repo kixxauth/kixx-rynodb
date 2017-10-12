@@ -1,3 +1,10 @@
+'use strict';
+
+const Kixx = require(`kixx`);
+
+const {VError, InvariantError} = Kixx.Errors;
+const {clone, unnest, append, compact, differenceWith, curry, uniqWith} = Kixx.Library;
+
 exports.initialize = (app) => {
 	const emitter = app.emitter;
 
@@ -16,6 +23,7 @@ exports.initialize = (app) => {
 
 		TXN.get = function get(args) {
 			const {scope, type, id, include} = args;
+			const key = {type, id};
 
 			// Fetch the object, resetting the cache if there is a cache miss
 			// on the get.
@@ -150,7 +158,7 @@ exports.initialize = (app) => {
 		};
 
 		TXN.scan = function scan(args) {
-			const {scope, type, cursor, limit};
+			const {scope, type, cursor, limit} = args;
 
 			const redisIndexKey = composeTypeScanIndexKey(scope, type);
 			const inclusiveStart = cursor ? cursor.start : 0;
@@ -272,7 +280,7 @@ exports.initialize = (app) => {
 			// 		return res;
 			// 	})
 			// 	.catch((err) => {
-						// Stash errors to be picked up when the transaction is committed.
+			//		// Stash errors to be picked up when the transaction is committed.
 			// 		transactionErrors.push(new VError(err, `Error in Rynodb Transaction#query()`));
 			// 		return null;
 			// 	});
@@ -293,7 +301,7 @@ exports.initialize = (app) => {
 		};
 
 		return TXN;
-	}
+	};
 
 	function createTransactionCache() {
 		const cache = Object.create(null);
@@ -340,6 +348,37 @@ exports.initialize = (app) => {
 			foreignKeys: {
 				enumerable: true,
 				value: spec.foreignKeys || []
+			},
+			attributes: {
+				enumerable: true,
+				value: spec.attributes || Object.create(null)
+			},
+			relationships: {
+				enumerable: true,
+				value: spec.relationships || Object.create(null)
+			}
+		});
+	}
+
+	function createReturnObject(spec) {
+		spec = clone(spec);
+
+		return Object.defineProperties(Object.create(null), {
+			type: {
+				enumerable: true,
+				value: spec.type
+			},
+			id: {
+				enumerable: true,
+				value: spec.id
+			},
+			created: {
+				enumerable: true,
+				value: spec.created || new Date().toISOString()
+			},
+			updated: {
+				enumerable: true,
+				value: spec.updated || new Date().toISOString()
 			},
 			attributes: {
 				enumerable: true,
@@ -407,6 +446,8 @@ exports.initialize = (app) => {
 	// the relationships Hash, find each related object, and update its foreignKeys
 	// Set.
 	function updateForeignKeys(scope, oldObject, newObject) {
+		const {type, id} = newObject;
+
 		const a = oldObject.relationships ? unnest(Object.keys(oldObject.relationships).map((rname) => {
 			return oldObject.relationships[rname];
 		})) : [];
@@ -435,7 +476,7 @@ exports.initialize = (app) => {
 						));
 					}
 
-					return Boolean(item);
+					return Boolean(obj);
 				});
 			})
 			.then((objects) => {
@@ -461,7 +502,7 @@ exports.initialize = (app) => {
 						));
 					}
 
-					return Boolean(item);
+					return Boolean(obj);
 				});
 			})
 			.then((objects) => {
@@ -603,7 +644,7 @@ exports.initialize = (app) => {
 						));
 					}
 
-					return Boolean(item);
+					return Boolean(obj);
 				});
 			})
 			.then((objects) => {
@@ -624,7 +665,7 @@ exports.initialize = (app) => {
 					return obj;
 				}));
 
-				return batchSetObjects(scope, mutatedItems);
+				return batchSetObjects(scope, mutatedObjects);
 			});
 	}
 
@@ -637,8 +678,22 @@ exports.initialize = (app) => {
 		return redisZREM(indexKey, id);
 	}
 
+	function getObject(scope, key, options) {
+		const {type, id} = key;
+		const {skipCache, resetCache} = options;
+	}
+
+	function setObject(scope, obj) {
+	}
+
+	function removeObject(scope, type, id) {
+	}
+
 	function batchGetObjects(scope, keys, options = {}) {
 		const {skipCache, resetCache} = options;
+	}
+
+	function batchSetObjects(scope, objects) {
 	}
 
 	function redisZRANGE(key, start, stop) {
