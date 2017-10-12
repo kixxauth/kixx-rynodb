@@ -68,6 +68,7 @@ exports.initialize = (app) => {
 				// No includes query? Just return the resource object.
 				return {resource: createReturnObject(obj), included: []};
 			}).catch((err) => {
+				// Stash errors to be picked up when the transaction is committed.
 				transactionErrors.push(new VError(err, `Error in Rynodb Transaction#get()`));
 				return null;
 			});
@@ -99,6 +100,7 @@ exports.initialize = (app) => {
 					]).then(() => createReturnObject(newObject));
 				})
 				.catch((err) => {
+					// Stash errors to be picked up when the transaction is committed.
 					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#set()`));
 					return obj;
 				});
@@ -108,25 +110,42 @@ exports.initialize = (app) => {
 			const {scope, type, id} = args;
 			const key = {type, id};
 
+			// Typically the caller will not call TXN.get() before calling
+			// TXN.remove(), thus we never get a chance to cache the object in the
+			// transactionCache, requiring us to fetch it here before removing it.
 			getObject(scope, key, {skipCache: true})
 				.then((obj) => {
 					if (!obj) return null;
 
+					// Once we have the current object, remove all references from
+					// foreign key relationships and indexes.
 					return Promise.all([
+						// Remove relationship links from other objects which reference
+						// this one. A list of object ids which hold references is stored
+						// in the foreignKeys Set.
 						removeForeignKeyRelationships(scope, obj),
+
+						// Queries are made against a special DynamoDB table/index pairing.
+						// Here, we remove any entries made by this object in that table.
 						removeFromQueryTable(),
+
+						// Lastly, we keep a special index in redis to allow faster scans
+						// of objects by type. Here we remove then entry for this object.
 						removeFromTypeIndex(scope, type, id)
 					]);
 				})
 				.then(() => {
+					// Once we remove all references from foreign key relationships and
+					// indexes it's time to remove the object itself.
 					return removeObject(scope, type, id);
 				})
 				.then(() => {
 					return true;
 				})
 				.catch((err) => {
+					// Stash errors to be picked up when the transaction is committed.
 					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#remove()`));
-					return null;
+					return false;
 				});
 		};
 
@@ -137,37 +156,37 @@ exports.initialize = (app) => {
 			const inclusiveStart = cursor ? cursor.start : 0;
 			const inclusiveStop = inclusiveStart + limit - 1;
 
-			return Promise.resolve(null)
-				.then(() => {
-					return redisZRANGE(redisIndexKey, inclusiveStart, inclusiveStop);
-				})
-				.then((ids) => {
-					const keys = ids.map((id) => {
-						return {type, id};
-					});
-
-					return batchGetObjects(scope, keys, {resetCache: true}).then((items) => {
-						items = items.filter((item, i) => {
-							if (!item) {
-								const {type, id} = keys[i];
-								warn(new InvariantError(
-									`Rynodb corrupt data: Missing resource ${type}.${id} but referenced in type scan index "${redisIndexKey}"`
-								));
-							}
-
-							return Boolean(item);
-						});
-
-						return {
-							items: items.map(createReturnObject),
-							cursor: {start: inclusiveStop + 1}
-						};
-					});
-				})
-				.catch((err) => {
-					transactionErrors.push(new VError(err, `Error in Rynodb Transaction#scan()`));
-					return null;
+			// Get the object ids by selecting elements out of the Redis set
+			// using he inclusive start and stop indexes.
+			return redisZRANGE(redisIndexKey, inclusiveStart, inclusiveStop).then((ids) => {
+				const keys = ids.map((id) => {
+					return {type, id};
 				});
+
+				// After getting all the ids from Redis, it's time to get all the
+				// objects from DynamoDB.
+				return batchGetObjects(scope, keys, {resetCache: true}).then((items) => {
+					items = items.filter((item, i) => {
+						if (!item) {
+							const {type, id} = keys[i];
+							warn(new InvariantError(
+								`Rynodb corrupt data: Missing resource ${type}.${id} but referenced in type scan index "${redisIndexKey}"`
+							));
+						}
+
+						return Boolean(item);
+					});
+
+					return {
+						items: items.map(createReturnObject),
+						cursor: {start: inclusiveStop + 1}
+					};
+				});
+			}).catch((err) => {
+				// Stash errors to be picked up when the transaction is committed.
+				transactionErrors.push(new VError(err, `Error in Rynodb Transaction#scan()`));
+				return {items: [], cursor: {start: 0}};
+			});
 		};
 
 		TXN.query = function query(args) {
@@ -253,6 +272,7 @@ exports.initialize = (app) => {
 			// 		return res;
 			// 	})
 			// 	.catch((err) => {
+						// Stash errors to be picked up when the transaction is committed.
 			// 		transactionErrors.push(new VError(err, `Error in Rynodb Transaction#query()`));
 			// 		return null;
 			// 	});
