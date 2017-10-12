@@ -1,3 +1,6 @@
+/* eslint-disable no-process-env, no-console */
+'use strict';
+
 const AWS = require(`aws-sdk`);
 
 const ENDPOINT = process.env.ENDPOINT;
@@ -9,6 +12,7 @@ const ARGS = process.argv[2];
 
 const CONFIG = {
 	apiVersion: `2012-08-10`,
+	region: AWS_REGION,
 	accessKeyId: AWS_ACCESS_KEY_ID,
 	secretAccessKey: AWS_SECRET_ACCESS_KEY
 };
@@ -32,13 +36,13 @@ const params = {
 
 dynamodb.getItem(params, (err, res) => {
 	if (err) {
-		console.log('Error:');
+		console.log(`Error:`);
 		console.log(`Error.name: ${err.name}, Error.code: ${err.code}`);
 		console.log(err.stack);
 		return;
 	}
 
-	console.log('Result:');
+	console.log(`Result:`);
 	console.log(JSON.stringify(res, null, 2));
 
 	// When item not found: res is an empty Object.
