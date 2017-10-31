@@ -31,7 +31,8 @@ const params = {
 		id: {
 			S: args.id
 		}
-	}
+	},
+	ReturnConsumedCapacity: `INDEXES`
 };
 
 dynamodb.getItem(params, (err, res) => {
@@ -81,6 +82,19 @@ dynamodb.getItem(params, (err, res) => {
 	//     },
 	//     "type": {
 	//       "S": "contentSpec"
+	//     }
+	//   },
+	//   // ReturnConsumedCapacity: "TOTAL"
+	//   "ConsumedCapacity": {
+	//     "TableName": "odd_store_collection_entities",
+	//     "CapacityUnits": 0.5
+	//   },
+	//   // ReturnConsumedCapacity: "INDEXES"
+	//   "ConsumedCapacity": {
+	//     "TableName": "odd_store_collection_entities",
+	//     "CapacityUnits": 0.5,
+	//     "Table": {
+	//       "CapacityUnits": 0.5
 	//     }
 	//   }
 	// }
