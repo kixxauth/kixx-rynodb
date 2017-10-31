@@ -3,13 +3,26 @@
 const ddb = require(`../../lib/dynamodb`);
 const DynamoDB = require(`../test-support/mocks/dynamodb`);
 const {assert} = require(`kixx/library`);
+const sinon = require(`sinon`);
 
 module.exports = (t) => {
 	const prefix = `test`;
 	const SCOPE = `SCOPEX`;
+	const TABLE_NAME = `${prefix}_entities_master`;
 
 	t.describe(`simple use case`, (t) => {
+		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
+
+		// Stub the DynamoDB#putItem() method.
+		sinon.stub(dynamodb, `putItem`).callsFake((params, callback) => {
+			// Make the callback async.
+			process.nextTick(() => {
+				callback(null, {Attributes: `XXX`, foo: `bar`});
+			});
+		});
+
+		// Create our curried set function.
 		const dynamodbSetObject = ddb.set(dynamodb, {prefix});
 
 		const obj = {
@@ -39,6 +52,27 @@ module.exports = (t) => {
 		t.it(`includes DynamoDB response in meta object`, () => {
 			assert.isEqual(`bar`, RESULT.meta.foo, `random DynamoDB response attribute`);
 			assert.isUndefined(RESULT.meta.Attributes, `filter off the "Attributes" property`);
+		});
+
+		t.it(`calls DynamoDB#putItem()`, () => {
+			assert.isOk(dynamodb.putItem.calledOnce, `putItem() called once`);
+		});
+
+		t.it(`sends correct table name in params`, () => {
+			const params = dynamodb.putItem.args[0][0];
+			assert.isEqual(TABLE_NAME, params.TableName, `TableName`);
+		});
+
+		t.it(`sends serialized item in params`, () => {
+			const {Item} = dynamodb.putItem.args[0][0];
+			assert.isEqual(obj.type, Item.type.S, `Item.type`);
+			assert.isEqual(obj.id, Item.id.S, `Item.id`);
+			assert.isEqual(obj.attributes.title, Item.attributes.M.title.S, `Item.attributes`);
+		});
+
+		t.it(`includes scope_type_key attribute`, () => {
+			const {Item} = dynamodb.putItem.args[0][0];
+			assert.isEqual(`${SCOPE}:${obj.type}`, Item.scope_type_key.S, `Item.scope_type_key`);
 		});
 	});
 };
