@@ -4,13 +4,15 @@
   "description": "A Redis enhanced Dynamodb store for Kixx",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "eslint ./ && NODE_ENV=test kixx-test-node",
+    "lint": "eslint ./"
   },
   "author": "Kris Walker (www.kixx.name)",
   "license": "MIT",
   "devDependencies": {
-    "aws-sdk": "^2.141.0",
-    "dynalite": "1.2.0",
-    "eslint": "^4.10.0"
+    "aws-sdk": "2.141.0",
+    "eslint": "4.10.0",
+    "kixx-test-node": "1.0.0",
+    "ramda": "0.25.0"
   }
 }
