@@ -5,9 +5,6 @@ module.exports = {
 	"env": {
 		"node": true
 	},
-	"globals": {
-		"Promise": true
-	},
 	"extends": "eslint:recommended",
 	"rules": {
 		"strict": [

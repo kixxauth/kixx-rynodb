@@ -31,7 +31,7 @@ const params = {
 		id: {
 			S: args.id
 		}
-	}
+	},
 	ReturnConsumedCapacity: `INDEXES`
 };
 

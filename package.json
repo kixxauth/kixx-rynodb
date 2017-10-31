@@ -8,10 +8,9 @@
   },
   "author": "Kris Walker (www.kixx.name)",
   "license": "MIT",
-  "dependencies": {
-    "aws-sdk": "^2.130.0"
-  },
   "devDependencies": {
-    "dynalite": "1.2.0"
+    "aws-sdk": "^2.141.0",
+    "dynalite": "1.2.0",
+    "eslint": "^4.10.0"
   }
 }
