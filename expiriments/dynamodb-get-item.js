@@ -31,7 +31,7 @@ const params = {
 		id: {
 			S: args.id
 		}
-	},
+	}
 	ReturnConsumedCapacity: `INDEXES`
 };
 
@@ -50,6 +50,7 @@ dynamodb.getItem(params, (err, res) => {
 
 	// res:
 	// {
+	//   // If not found, then Item will not exist.
 	//   "Item": {
 	//     "relationships": {
 	//       "M": {

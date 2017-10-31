@@ -34,7 +34,8 @@ const params = {
 	},
 	KeyConditionExpression: `channel = :p1 AND begins_with (title, :v1)`,
 	Limit: 5,
-	ExclusiveStartKey: null
+	ExclusiveStartKey: null,
+	ReturnConsumedCapacity: `TOTAL`
 };
 
 dynamodb.query(params, (err, res) => {
@@ -78,6 +79,24 @@ dynamodb.query(params, (err, res) => {
 	//     },
 	//     "title": {
 	//       "S": "Pioneer Panthers"
+	//     }
+	//   },
+	//   // ReturnConsumedCapacity: "TOTAL"
+	//   "ConsumedCapacity": {
+	//     "TableName": "odd_store_collection_entities",
+	//     "CapacityUnits": 0.5
+	//   }
+	//   // ReturnConsumedCapacity: "INDEXES"
+	//   "ConsumedCapacity": {
+	//     "TableName": "odd_store_collection_entities",
+	//     "CapacityUnits": 0.5,
+	//     "Table": {
+	//       "CapacityUnits": 0
+	//     },
+	//     "GlobalSecondaryIndexes": {
+	//       "odd_store_collection_by_channel": {
+	//         "CapacityUnits": 0.5
+	//       }
 	//     }
 	//   }
 	// }
