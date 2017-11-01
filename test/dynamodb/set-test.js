@@ -122,8 +122,10 @@ module.exports = (t) => {
 			assert.isEqual(`ProvisionedThroughputExceededException`, ERROR.errors[0].name);
 		});
 
-		t.it(`consumes more than 600ms for 5 retries`, () => {
-			assert.isGreaterThan(600, ELAPSED, `elapsed time`);
+		// The log backoff formula defined in dynamodb.js computeBackoffTime() that gives us 310ms:
+		// `1240 === [2,3,4,5,6].reduce((n, i) => n + Math.pow(2, i) * 10, 0)`
+		t.it(`consumes more than 1240ms for 5 retries`, () => {
+			assert.isGreaterThan(1240, ELAPSED, `elapsed time`);
 		});
 	});
 };
