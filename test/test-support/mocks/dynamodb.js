@@ -1,6 +1,28 @@
 'use strict';
 
 class DynamoDB {
+	batchGetItem(params, callback) {
+		const TableName = Object.keys(params.RequestItems);
+		const Responses = {};
+
+		Responses[TableName] = params.RequestItems[TableName].Keys.map((key) => {
+			key.type = {S: key.scope_type_key.S.split(`:`)[1]};
+			key.attributes = {M: {title: {S: `Foo Bar`}}};
+			return key;
+		});
+
+		let res = {
+			Responses,
+			foo: `bar`
+		};
+
+		res = DynamoDB.setConsumedCapacity(params, res);
+
+		process.nextTick(() => {
+			callback(null, res);
+		});
+	}
+
 	batchWriteItem(params, callback) {
 		let res = {
 			UnprocessedItems: {},

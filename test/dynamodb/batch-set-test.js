@@ -71,7 +71,7 @@ module.exports = (t) => {
 
 		t.it(`sends correct table name in params`, () => {
 			const params = dynamodb.batchWriteItem.args[0][0];
-			assert.includes(TABLE_NAME, Object.keys(params.RequestItems), `TableName`);
+			assert.isEqual(TABLE_NAME, Object.keys(params.RequestItems)[0], `TableName`);
 			assert.isOk(Array.isArray(params.RequestItems[TABLE_NAME]), `RequestItems`);
 		});
 
@@ -213,7 +213,7 @@ module.exports = (t) => {
 
 		// Create our curried batchSet function.
 		const dynamodbBatchSetObjects = ddb.batchSet(dynamodb, {
-			backoffMultiplier: 100,
+			backoffMultiplier: 1000,
 			prefix
 		});
 
@@ -233,7 +233,8 @@ module.exports = (t) => {
 		let ELAPSED;
 
 		t.before((done) => {
-			return dynamodbBatchSetObjects(null, SCOPE, objects).then((res) => {
+			// Override the backoffMultiplier
+			return dynamodbBatchSetObjects({backoffMultiplier: 100}, SCOPE, objects).then((res) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
