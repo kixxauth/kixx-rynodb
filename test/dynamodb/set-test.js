@@ -16,7 +16,7 @@ module.exports = (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
 
-		// Spy on the DynamoDB#putItem() method.
+		// Spy on the DynamoDB method.
 		sinon.spy(dynamodb, `putItem`);
 
 		// Create our curried set function.
@@ -78,7 +78,7 @@ module.exports = (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
 
-		// Stub the DynamoDB#putItem() method.
+		// Stub the DynamoDB method.
 		sinon.stub(dynamodb, `putItem`).callsFake((params, callback) => {
 			// Make the callback async.
 			process.nextTick(() => {
@@ -130,6 +130,7 @@ module.exports = (t) => {
 		t.it(`calls DynamoDB#putItem() 5 times`, () => {
 			assert.isEqual(5, dynamodb.putItem.callCount, `putItem() calls`);
 
+			// Use the sinon .args Array to access each method call.
 			dynamodb.putItem.args.forEach((args) => {
 				const {Item} = args[0];
 				assert.isEqual(obj.type, Item.type.S, `Item.type`);
@@ -139,13 +140,13 @@ module.exports = (t) => {
 		});
 	});
 
-	t.describe(`throughput error on first try`, (t) => {
+	t.describe(`with throughput error in first call only`, (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
 
 		let count = 0;
 
-		// Stub the DynamoDB#putItem() method.
+		// Stub the DynamoDB method.
 		sinon.stub(dynamodb, `putItem`).callsFake((params, callback) => {
 			// Increment the counter.
 			count += 1;
@@ -193,6 +194,10 @@ module.exports = (t) => {
 			assert.isEqual(obj.id, RESULT.data.id, `id property`);
 		});
 
+		t.it(`calls DynamoDB#putItem() correct number of times`, () => {
+			assert.isOk(dynamodb.putItem.calledTwice, `putItem() called twice`);
+		});
+
 		// The log backoff formula defined in dynamodb.js computeBackoffTime() that gives us:
 		// `400 === Math.pow(2, 0 + 2) * 100`
 		t.it(`consumes more than 400ms for 1 retry`, () => {
@@ -204,7 +209,7 @@ module.exports = (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
 
-		// Stub the DynamoDB#putItem() method.
+		// Stub the DynamoDB method.
 		sinon.stub(dynamodb, `putItem`).callsFake((params, callback) => {
 			// Make the callback async.
 			process.nextTick(() => {

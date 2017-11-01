@@ -3,7 +3,7 @@
 class DynamoDB {
 	batchWriteItem(params, callback) {
 		let res = {
-			Attributes: `XXX`,
+			UnprocessedItems: {},
 			foo: `bar`
 		};
 
@@ -16,7 +16,7 @@ class DynamoDB {
 
 	putItem(params, callback) {
 		let res = {
-			UnprocessedItems: {},
+			Attributes: `XXX`,
 			foo: `bar`
 		};
 
