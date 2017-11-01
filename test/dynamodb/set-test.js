@@ -16,17 +16,13 @@ module.exports = (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
 
-		// Stub the DynamoDB#putItem() method.
-		sinon.stub(dynamodb, `putItem`).callsFake((params, callback) => {
-			// Make the callback async.
-			process.nextTick(() => {
-				callback(null, {Attributes: `XXX`, foo: `bar`});
-			});
-		});
+		// Spy on the DynamoDB#putItem() method.
+		sinon.spy(dynamodb, `putItem`);
 
 		// Create our curried set function.
 		const dynamodbSetObject = ddb.set(dynamodb, {prefix});
 
+		// Input parameter.
 		const obj = {
 			type: `foo`,
 			id: `bar`,
@@ -96,6 +92,7 @@ module.exports = (t) => {
 			backoffMultiplier: 100
 		});
 
+		// Input parameter.
 		const obj = {
 			type: `foo`,
 			id: `bar`,
@@ -125,9 +122,20 @@ module.exports = (t) => {
 		});
 
 		// The log backoff formula defined in dynamodb.js computeBackoffTime() that gives us:
-		// `1240 === [2,3,4,5,6].reduce((n, i) => n + Math.pow(2, i) * 10, 0)`
-		t.it(`consumes more than 1240ms for 5 retries`, () => {
-			assert.isGreaterThan(1240, ELAPSED, `elapsed time`);
+		// `600 === [2,3,4,5].reduce((n, i) => n + Math.pow(2, i) * 10, 0)`
+		t.it(`consumes more than 600ms for 5 retries`, () => {
+			assert.isGreaterThan(600, ELAPSED, `elapsed time`);
+		});
+
+		t.it(`calls DynamoDB#putItem() 5 times`, () => {
+			assert.isEqual(5, dynamodb.putItem.callCount, `putItem() calls`);
+
+			dynamodb.putItem.args.forEach((args) => {
+				const {Item} = args[0];
+				assert.isEqual(obj.type, Item.type.S, `Item.type`);
+				assert.isEqual(obj.id, Item.id.S, `Item.id`);
+				assert.isEqual(obj.attributes.title, Item.attributes.M.title.S, `Item.attributes`);
+			});
 		});
 	});
 
@@ -158,6 +166,7 @@ module.exports = (t) => {
 			backoffMultiplier: 10
 		});
 
+		// Input parameter.
 		const obj = {
 			type: `foo`,
 			id: `bar`,
@@ -206,6 +215,7 @@ module.exports = (t) => {
 		// Create our curried set function.
 		const dynamodbSetObject = ddb.set(dynamodb, {prefix});
 
+		// Input parameter.
 		const obj = {
 			type: `foo`,
 			id: `bar`,
@@ -228,7 +238,7 @@ module.exports = (t) => {
 		t.it(`rejects with a StackedError`, () => {
 			assert.isEqual(`StackedError`, ERROR.name, `error name`);
 			assert.isEqual(`ResourceNotFoundException`, ERROR.errors[0].name, `root error name`);
-			assert.isEqual(`Missing DynamoDB table "${prefix}_entities_master"`, ERROR.message, `error message`);
+			assert.isEqual(`Missing DynamoDB table "${TABLE_NAME}"`, ERROR.message, `error message`);
 		});
 	});
 };
