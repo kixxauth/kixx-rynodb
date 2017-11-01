@@ -14,6 +14,23 @@ class DynamoDB {
 		});
 	}
 
+	getItem(params, callback) {
+		let res = {
+			Item: JSON.parse(JSON.stringify(params.Key)),
+			foo: `bar`
+		};
+
+		res.Item.type = {S: params.Key.scope_type_key.S.split(`:`)[1]};
+
+		res.Item.attributes = {M: {title: {S: `Foo Bar`}}};
+
+		res = DynamoDB.setConsumedCapacity(params, res);
+
+		process.nextTick(() => {
+			callback(null, res);
+		});
+	}
+
 	putItem(params, callback) {
 		let res = {
 			Attributes: `XXX`,
