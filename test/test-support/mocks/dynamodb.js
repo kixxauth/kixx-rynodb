@@ -2,7 +2,7 @@
 
 class DynamoDB {
 	batchGetItem(params, callback) {
-		const TableName = Object.keys(params.RequestItems);
+		const TableName = Object.keys(params.RequestItems)[0];
 		const Responses = {};
 
 		Responses[TableName] = params.RequestItems[TableName].Keys.map((key) => {
@@ -13,6 +13,7 @@ class DynamoDB {
 
 		let res = {
 			Responses,
+			UnprocessedItems: {},
 			foo: `bar`
 		};
 

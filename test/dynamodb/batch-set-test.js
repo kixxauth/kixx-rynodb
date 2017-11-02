@@ -259,7 +259,7 @@ module.exports = (t) => {
 
 		// The log backoff formula defined in dynamodb.js computeBackoffTime() that gives us:
 		// `400 === Math.pow(2, 0 + 2) * 100`
-		t.it(`consumes more than 400ms for 5 retries`, () => {
+		t.it(`consumes more than 400ms for 1 retry`, () => {
 			assert.isGreaterThan(400, ELAPSED, `elapsed time`);
 		});
 	});
@@ -439,7 +439,7 @@ module.exports = (t) => {
 
 		// The log backoff formula defined in dynamodb.js computeBackoffTime() that gives us:
 		// `400 === Math.pow(2, 0 + 2) * 100`
-		t.it(`consumes more than 400ms for 5 retries`, () => {
+		t.it(`consumes more than 400ms for 1 retry`, () => {
 			assert.isGreaterThan(400, ELAPSED, `elapsed time`);
 		});
 	});
