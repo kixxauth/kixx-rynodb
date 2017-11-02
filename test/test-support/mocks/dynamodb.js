@@ -37,6 +37,19 @@ class DynamoDB {
 		});
 	}
 
+	deleteItem(params, callback) {
+		let res = {
+			Attributes: `XXX`,
+			foo: `bar`
+		};
+
+		res = DynamoDB.setConsumedCapacity(params, res);
+
+		process.nextTick(() => {
+			callback(null, res);
+		});
+	}
+
 	getItem(params, callback) {
 		let res = {
 			Item: JSON.parse(JSON.stringify(params.Key)),
