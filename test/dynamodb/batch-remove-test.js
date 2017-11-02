@@ -2,7 +2,7 @@
 
 const ddb = require(`../../lib/dynamodb`);
 const DynamoDB = require(`../test-support/mocks/dynamodb`);
-const {clone, tail, take, range} = require(`ramda`);
+const {clone, tail, range} = require(`ramda`);
 const {assert} = require(`kixx/library`);
 const sinon = require(`sinon`);
 const Chance = require(`chance`);
@@ -21,10 +21,10 @@ module.exports = (t) => {
 		const dynamodb = new DynamoDB();
 
 		// Spy on the DynamoDB method.
-		sinon.spy(dynamodb, `batchGetItem`);
+		sinon.spy(dynamodb, `batchWriteItem`);
 
-		// Create our curried batchGet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {prefix});
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {prefix});
 
 		// Input parameter.
 		const keys = [
@@ -41,53 +41,52 @@ module.exports = (t) => {
 		let RESULT = null;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects(null, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects(null, SCOPE, keys).then((res) => {
 				RESULT = res;
 				return done();
 			}).catch(done);
 		});
 
-		t.it(`returns the objects referenced by the keys`, () => {
+		t.it(`returns an array of true values`, () => {
 			assert.isEqual(keys.length, RESULT.data.length, `same length`);
 
-			RESULT.data.forEach((object, i) => {
-				assert.isEqual(keys[i].type, object.type, `type property`);
-				assert.isEqual(keys[i].id, object.id, `id property`);
-				assert.isEqual(`Foo Bar`, object.attributes.title, `title attribute`);
+			RESULT.data.forEach((val) => {
+				assert.isEqual(true, val, `value is true`);
 			});
 		});
 
-		t.it(`calls DynamoDB#batchGetItem()`, () => {
-			assert.isOk(dynamodb.batchGetItem.calledOnce, `batchGetItem() called once`);
+		t.it(`calls DynamoDB#batchWriteItem()`, () => {
+			assert.isOk(dynamodb.batchWriteItem.calledOnce, `batchWriteItem() called once`);
 		});
 
 		t.it(`sends correct table name in params`, () => {
-			const params = dynamodb.batchGetItem.args[0][0];
+			const params = dynamodb.batchWriteItem.args[0][0];
 			assert.isEqual(TABLE_NAME, Object.keys(params.RequestItems)[0], `TableName`);
 			assert.isOk(Array.isArray(params.RequestItems[TABLE_NAME].Keys), `RequestItems`);
 		});
 
 		t.it(`sends serialized keys in params`, () => {
-			const params = dynamodb.batchGetItem.args[0][0];
-			const Keys = params.RequestItems[TABLE_NAME].Keys;
+			const params = dynamodb.batchWriteItem.args[0][0];
+			const requests = params.RequestItems[TABLE_NAME];
 
-			assert.isEqual(keys.length, Keys.length, `keys.length === Keys.length`);
+			assert.isEqual(keys.length, requests.length, `keys.length === requests.length`);
 
-			Keys.forEach((key1, i) => {
+			requests.forEach((req, i) => {
+				req = req.DeleteRequest;
 				const key = keys[i];
-				assert.isEqual(key.type, key1.scope_type_key.S.split(`:`)[1], `key type`);
-				assert.isEqual(key.id, key1.id.S, `key id`);
+				assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key type`);
+				assert.isEqual(key.id, req.Key.id.S, `key id`);
 			});
 		});
 
 		t.it(`includes scope_type_key attribute`, () => {
-			const params = dynamodb.batchGetItem.args[0][0];
-			const Keys = params.RequestItems[TABLE_NAME].Keys;
+			const params = dynamodb.batchWriteItem.args[0][0];
+			const requests = params.RequestItems[TABLE_NAME];
 
-			assert.isEqual(keys.length, Keys.length, `keys.length === Keys.length`);
+			assert.isEqual(keys.length, requests.length, `keys.length === requests.length`);
 
-			Keys.forEach((key1, i) => {
-				assert.isEqual(`${SCOPE}:${keys[i].type}`, key1.scope_type_key.S, `scope_type_key`);
+			requests.forEach((req, i) => {
+				assert.isEqual(`${SCOPE}:${keys[i].type}`, req.Key.scope_type_key.S, `scope_type_key`);
 			});
 		});
 	});
@@ -97,15 +96,15 @@ module.exports = (t) => {
 		const dynamodb = new DynamoDB();
 
 		// Spy on the DynamoDB method.
-		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+		sinon.stub(dynamodb, `batchWriteItem`).callsFake((params, callback) => {
 			// Make the callback async.
 			process.nextTick(() => {
 				callback(new ProvisionedThroughputExceededException(`TEST`));
 			});
 		});
 
-		// Create our curried batchGet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {
 			backoffMultiplier: 10,
 			prefix
 		});
@@ -123,7 +122,7 @@ module.exports = (t) => {
 		let ELAPSED;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects(null, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects(null, SCOPE, keys).then((res) => {
 				return done(new Error(`should not resolve`));
 			}).catch((err) => {
 				ERROR = err;
@@ -143,19 +142,20 @@ module.exports = (t) => {
 			assert.isGreaterThan(600, ELAPSED, `elapsed time`);
 		});
 
-		t.it(`calls DynamoDB#batchGetItem() 5 times`, () => {
-			assert.isEqual(5, dynamodb.batchGetItem.callCount, `batchGetItem() calls`);
+		t.it(`calls DynamoDB#batchWriteItem() 5 times`, () => {
+			assert.isEqual(5, dynamodb.batchWriteItem.callCount, `batchWriteItem() calls`);
 
 			// Use the sinon .args Array to access each method call.
-			dynamodb.batchGetItem.args.forEach((args) => {
-				const Keys = args[0].RequestItems[TABLE_NAME].Keys;
+			dynamodb.batchWriteItem.args.forEach((args) => {
+				const requests = args[0].RequestItems[TABLE_NAME];
 
-				assert.isEqual(keys.length, Keys.length, `keys.length === Keys.length`);
+				assert.isEqual(keys.length, requests.length, `keys.length === requests.length`);
 
-				Keys.forEach((key1, i) => {
+				requests.forEach((req, i) => {
+					req = req.DeleteRequest;
 					const key = keys[i];
-					assert.isEqual(key.type, key1.scope_type_key.S.split(`:`)[1], `key.type`);
-					assert.isEqual(key.id, key1.id.S, `key.id`);
+					assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key.type`);
+					assert.isEqual(key.id, req.Key.id.S, `key.id`);
 				});
 			});
 		});
@@ -168,7 +168,7 @@ module.exports = (t) => {
 		let count = 0;
 
 		// Spy on the DynamoDB method.
-		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+		sinon.stub(dynamodb, `batchWriteItem`).callsFake((params, callback) => {
 			// Increment the counter.
 			count += 1;
 
@@ -179,27 +179,12 @@ module.exports = (t) => {
 					callback(new ProvisionedThroughputExceededException(`TEST`));
 				}
 
-				const TableName = Object.keys(params.RequestItems)[0];
-				const Responses = {};
-
-				Responses[TableName] = params.RequestItems[TableName].Keys.map((key) => {
-					key.type = {S: key.scope_type_key.S.split(`:`)[1]};
-					key.attributes = {M: {title: {S: `Foo Bar`}}};
-					return key;
-				});
-
-				let res = {
-					Responses,
-					UnprocessedItems: {},
-					foo: `bar`
-				};
-
-				callback(null, res);
+				callback(null, {UnprocessedItems: {}, foo: `bar`});
 			});
 		});
 
-		// Create our curried batchGet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {
 			prefix
 		});
 
@@ -217,24 +202,22 @@ module.exports = (t) => {
 
 		t.before((done) => {
 			// Override the backoffMultiplier
-			return dynamodbBatchGetObjects({backoffMultiplier: 100}, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects({backoffMultiplier: 10000}, SCOPE, keys).then((res) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
 			}).catch(done);
 		});
 
-		t.it(`calls DynamoDB#batchGetItem() correct number of times`, () => {
-			assert.isOk(dynamodb.batchGetItem.calledTwice, `batchGetItem() called twice`);
+		t.it(`calls DynamoDB#batchWriteItem() correct number of times`, () => {
+			assert.isOk(dynamodb.batchWriteItem.calledTwice, `batchWriteItem() called twice`);
 		});
 
-		t.it(`returns the objects referenced by the keys`, () => {
+		t.it(`returns an array of true values`, () => {
 			assert.isEqual(keys.length, RESULT.data.length, `same length`);
 
-			RESULT.data.forEach((object, i) => {
-				assert.isEqual(keys[i].type, object.type, `type property`);
-				assert.isEqual(keys[i].id, object.id, `id property`);
-				assert.isEqual(`Foo Bar`, object.attributes.title, `title attribute`);
+			RESULT.data.forEach((val) => {
+				assert.isEqual(true, val, `value is true`);
 			});
 		});
 
@@ -250,11 +233,11 @@ module.exports = (t) => {
 		const dynamodb = new DynamoDB();
 
 		// Spy on the DynamoDB method.
-		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+		sinon.stub(dynamodb, `batchWriteItem`).callsFake((params, callback) => {
 			const UnprocessedItems = clone(params.RequestItems);
 
 			// "Process" 1 item by popping off the first item using tail().
-			UnprocessedItems[TABLE_NAME].Keys = tail(UnprocessedItems[TABLE_NAME].Keys);
+			UnprocessedItems[TABLE_NAME] = tail(UnprocessedItems[TABLE_NAME]);
 
 			// Make the callback async.
 			process.nextTick(() => {
@@ -262,8 +245,8 @@ module.exports = (t) => {
 			});
 		});
 
-		// Create our curried batchGet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {
 			backoffMultiplier: 1000,
 			prefix
 		});
@@ -276,7 +259,8 @@ module.exports = (t) => {
 		let ELAPSED;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects({backoffMultiplier: 10}, SCOPE, keys).then((res) => {
+			// TODO: backoffMultiplier: 10
+			return dynamodbBatchRemoveObjects({backoffMultiplier: 1}, SCOPE, keys).then((res) => {
 				return done(new Error(`should not resolve`));
 			}).catch((err) => {
 				ERROR = err;
@@ -296,25 +280,26 @@ module.exports = (t) => {
 			assert.isGreaterThan(600, ELAPSED, `elapsed time`);
 		});
 
-		t.it(`calls DynamoDB#batchGetItem() 5 times`, () => {
-			assert.isEqual(5, dynamodb.batchGetItem.callCount, `batchGetItem() calls`);
+		t.it(`calls DynamoDB#batchWriteItem() 5 times`, () => {
+			assert.isEqual(5, dynamodb.batchWriteItem.callCount, `batchWriteItem() calls`);
 
 			// Use the sinon .args Array to access each method call.
-			dynamodb.batchGetItem.args.forEach((args, call) => {
-				const Keys = args[0].RequestItems[TABLE_NAME].Keys;
+			dynamodb.batchWriteItem.args.forEach((args, call) => {
+				const requests = args[0].RequestItems[TABLE_NAME];
 
-				// Since we "process" 1 item in each call to our mock batchGetItem() we
+				// Since we "process" 1 item in each call to our mock batchWriteItem() we
 				// can conclude the correct number of keys is the total keys minus
 				// the call index.
-				assert.isEqual(keys.length - call, Keys.length, `keys.length === Keys.length`);
+				assert.isEqual(keys.length - call, requests.length, `keys.length === requests.length`);
 
-				Keys.forEach((key1, i) => {
-					// Since we "process" 1 item in each call to our mock batchGetItem()
+				requests.forEach((req, i) => {
+					req = req.DeleteRequest;
+					// Since we "process" 1 item in each call to our mock batchWriteItem()
 					// we can conclude the correct key index is the current index added
 					// to the call index.
 					const key = keys[i + call];
-					assert.isEqual(key.type, key1.scope_type_key.S.split(`:`)[1], `key.type`);
-					assert.isEqual(key.id, key1.id.S, `key.id`);
+					assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key.type`);
+					assert.isEqual(key.id, req.Key.id.S, `key.id`);
 				});
 			});
 		});
@@ -327,28 +312,18 @@ module.exports = (t) => {
 		let count = 0;
 
 		// Spy on the DynamoDB method.
-		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+		sinon.stub(dynamodb, `batchWriteItem`).callsFake((params, callback) => {
 			count += 1;
 
-			let Keys = params.RequestItems[TABLE_NAME].Keys;
 			let UnprocessedItems = {};
 
 			if (count <= 1) {
 				UnprocessedItems = clone(params.RequestItems);
 				// "Process" 1 item by popping off the first item using tail().
-				UnprocessedItems[TABLE_NAME].Keys = tail(Keys);
-				Keys = take(1, Keys);
+				UnprocessedItems[TABLE_NAME].Keys = tail(UnprocessedItems[TABLE_NAME].Keys);
 			}
 
-			const Responses = {};
-			Responses[TABLE_NAME] = Keys.map((key) => {
-				key.type = {S: key.scope_type_key.S.split(`:`)[1]};
-				key.attributes = {M: {title: {S: `Foo Bar`}}};
-				return key;
-			});
-
 			let res = {
-				Responses,
 				UnprocessedItems,
 				foo: `bar`
 			};
@@ -359,8 +334,8 @@ module.exports = (t) => {
 			});
 		});
 
-		// Create our curried batchSet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {
 			prefix
 		});
 
@@ -372,24 +347,22 @@ module.exports = (t) => {
 		let ELAPSED;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects({backoffMultiplier: 100}, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects({backoffMultiplier: 100}, SCOPE, keys).then((res) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
 			}).catch(done);
 		});
 
-		t.it(`calls DynamoDB#batchGetItem() correct number of times`, () => {
-			assert.isOk(dynamodb.batchGetItem.calledTwice, `batchGetItem() called twice`);
+		t.it(`calls DynamoDB#batchWriteItem() correct number of times`, () => {
+			assert.isOk(dynamodb.batchWriteItem.calledTwice, `batchWriteItem() called twice`);
 		});
 
-		t.it(`returns the objects referenced by the keys`, () => {
+		t.it(`returns an array of true values`, () => {
 			assert.isEqual(keys.length, RESULT.data.length, `same length`);
 
-			RESULT.data.forEach((object, i) => {
-				assert.isEqual(keys[i].type, object.type, `type property`);
-				assert.isEqual(keys[i].id, object.id, `id property`);
-				assert.isEqual(`Foo Bar`, object.attributes.title, `title attribute`);
+			RESULT.data.forEach((val) => {
+				assert.isEqual(true, val, `value is true`);
 			});
 		});
 
@@ -405,10 +378,10 @@ module.exports = (t) => {
 		const dynamodb = new DynamoDB();
 
 		// Spy on the DynamoDB method.
-		sinon.spy(dynamodb, `batchGetItem`);
+		sinon.spy(dynamodb, `batchWriteItem`);
 
-		// Create our curried batchGet function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {prefix});
+		// Create our curried batchRemove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {prefix});
 
 		// Input parameter.
 		const keys = range(0, 26).map(createKey);
@@ -416,50 +389,49 @@ module.exports = (t) => {
 		let RESULT = null;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects(null, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects(null, SCOPE, keys).then((res) => {
 				RESULT = res;
 				return done();
 			}).catch(done);
 		});
 
-		t.it(`calls DynamoDB#batchGetItem()`, () => {
-			assert.isOk(dynamodb.batchGetItem.calledTwice, `batchGetItem() called twice`);
+		t.it(`calls DynamoDB#batchWriteItem()`, () => {
+			assert.isOk(dynamodb.batchWriteItem.calledTwice, `batchWriteItem() called twice`);
 		});
 
-		t.it(`returns the objects referenced by the keys`, () => {
+		t.it(`returns an array of true values`, () => {
 			assert.isEqual(keys.length, RESULT.data.length, `same length`);
 
-			RESULT.data.forEach((object, i) => {
-				assert.isEqual(keys[i].type, object.type, `type property`);
-				assert.isEqual(keys[i].id, object.id, `id property`);
-				assert.isEqual(`Foo Bar`, object.attributes.title, `title attribute`);
+			RESULT.data.forEach((val) => {
+				assert.isEqual(true, val, `value is true`);
 			});
 		});
 
 		t.it(`sends 25 items in first call`, () => {
-			const params = dynamodb.batchGetItem.args[0][0];
-			const requestedKeys = params.RequestItems[TABLE_NAME].Keys;
+			const params = dynamodb.batchWriteItem.args[0][0];
+			const requests = params.RequestItems[TABLE_NAME];
 
-			assert.isEqual(25, requestedKeys.length, `requestedKeys.length`);
+			assert.isEqual(25, requests.length, `requests.length`);
 
-			requestedKeys.forEach((key1, i) => {
+			requests.forEach((req, i) => {
+				req = req.DeleteRequest;
 				const key = keys[i];
-				assert.isEqual(key.type, key1.scope_type_key.S.split(`:`)[1], `key type`);
-				assert.isEqual(key.id, key1.id.S, `key id`);
+				assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key type`);
+				assert.isEqual(key.id, req.Key.id.S, `key id`);
 			});
 		});
 
 		t.it(`sends 1 item in second call`, () => {
-			const params = dynamodb.batchGetItem.args[1][0];
-			const requestedKeys = params.RequestItems[TABLE_NAME].Keys;
+			const params = dynamodb.batchWriteItem.args[1][0];
+			const requests = params.RequestItems[TABLE_NAME];
 
-			assert.isEqual(1, requestedKeys.length, `requestedKeys.length`);
+			assert.isEqual(1, requests.length, `requests.length`);
 
-			const key1 = requestedKeys[0];
+			const req = requests[0];
 			const key = keys[25];
 
-			assert.isEqual(key.type, key1.scope_type_key.S.split(`:`)[1], `key type`);
-			assert.isEqual(key.id, key1.id.S, `key id`);
+			assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key type`);
+			assert.isEqual(key.id, req.Key.id.S, `key id`);
 		});
 	});
 
@@ -468,15 +440,15 @@ module.exports = (t) => {
 		const dynamodb = new DynamoDB();
 
 		// Stub the DynamoDB method.
-		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+		sinon.stub(dynamodb, `batchWriteItem`).callsFake((params, callback) => {
 			// Make the callback async.
 			process.nextTick(() => {
 				callback(new ResourceNotFoundException(`TEST`));
 			});
 		});
 
-		// Create our curried get function.
-		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {prefix});
+		// Create our curried remove function.
+		const dynamodbBatchRemoveObjects = ddb.batchRemove(dynamodb, {prefix});
 
 		// Input parameter.
 		const keys = [
@@ -489,7 +461,7 @@ module.exports = (t) => {
 		let ERROR = null;
 
 		t.before((done) => {
-			return dynamodbBatchGetObjects(null, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects(null, SCOPE, keys).then((res) => {
 				return done(new Error(`should not resolve`));
 			}).catch((err) => {
 				ERROR = err;
