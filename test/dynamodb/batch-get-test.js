@@ -463,6 +463,81 @@ module.exports = (t) => {
 		});
 	});
 
+	t.describe(`with retryLimit set in initial options`, (t) => {
+		// Create a mock AWS.DynamoDB instance.
+		const dynamodb = new DynamoDB();
+
+		// Spy on the DynamoDB method.
+		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+			// Make the callback async.
+			process.nextTick(() => {
+				callback(new ProvisionedThroughputExceededException(`TEST`));
+			});
+		});
+
+		// Create our curried batchGet function.
+		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+			prefix,
+			backoffMultiplier: 1,
+			retryLimit: 2
+		});
+
+		// Input parameter.
+		const keys = range(0, 3).map(createKey);
+
+		t.before((done) => {
+			return dynamodbBatchGetObjects(null, SCOPE, keys).then((res) => {
+				return done(new Error(`should not resolve`));
+			}).catch(() => {
+				return done();
+			});
+		});
+
+		t.it(`calls DynamoDB#batchGetItem() 2 times`, () => {
+			assert.isEqual(2, dynamodb.batchGetItem.callCount, `batchGetItem() calls`);
+		});
+	});
+
+	t.describe(`with retryLimit set in call options`, (t) => {
+		// Create a mock AWS.DynamoDB instance.
+		const dynamodb = new DynamoDB();
+
+		// Spy on the DynamoDB method.
+		sinon.stub(dynamodb, `batchGetItem`).callsFake((params, callback) => {
+			// Make the callback async.
+			process.nextTick(() => {
+				callback(new ProvisionedThroughputExceededException(`TEST`));
+			});
+		});
+
+		// Create our curried batchGet function.
+		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {
+			prefix,
+			backoffMultiplier: 10000,
+			retryLimit: 10
+		});
+
+		// Input parameter.
+		const keys = range(0, 3).map(createKey);
+
+		t.before((done) => {
+			const opts = {
+				backoffMultiplier: 1,
+				retryLimit: 2
+			};
+
+			return dynamodbBatchGetObjects(opts, SCOPE, keys).then((res) => {
+				return done(new Error(`should not resolve`));
+			}).catch(() => {
+				return done();
+			});
+		});
+
+		t.it(`calls DynamoDB#batchGetItem() 2 times`, () => {
+			assert.isEqual(2, dynamodb.batchGetItem.callCount, `batchGetItem() calls`);
+		});
+	});
+
 	t.describe(`with ResourceNotFoundException`, (t) => {
 		// Create a mock AWS.DynamoDB instance.
 		const dynamodb = new DynamoDB();
