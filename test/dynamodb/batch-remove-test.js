@@ -62,7 +62,7 @@ module.exports = (t) => {
 		t.it(`sends correct table name in params`, () => {
 			const params = dynamodb.batchWriteItem.args[0][0];
 			assert.isEqual(TABLE_NAME, Object.keys(params.RequestItems)[0], `TableName`);
-			assert.isOk(Array.isArray(params.RequestItems[TABLE_NAME].Keys), `RequestItems`);
+			assert.isOk(Array.isArray(params.RequestItems[TABLE_NAME]), `RequestItems`);
 		});
 
 		t.it(`sends serialized keys in params`, () => {
@@ -86,6 +86,7 @@ module.exports = (t) => {
 			assert.isEqual(keys.length, requests.length, `keys.length === requests.length`);
 
 			requests.forEach((req, i) => {
+				req = req.DeleteRequest;
 				assert.isEqual(`${SCOPE}:${keys[i].type}`, req.Key.scope_type_key.S, `scope_type_key`);
 			});
 		});
