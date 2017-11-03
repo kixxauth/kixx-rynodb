@@ -550,7 +550,7 @@ module.exports = (t) => {
 			});
 		});
 
-		// Create our curried get function.
+		// Create our curried batchGet function.
 		const dynamodbBatchGetObjects = ddb.batchGet(dynamodb, {prefix});
 
 		// Input parameter.
