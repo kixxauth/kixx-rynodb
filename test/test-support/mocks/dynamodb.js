@@ -1,5 +1,10 @@
 'use strict';
 
+const {range} = require(`ramda`);
+const Chance = require(`chance`);
+
+const chance = new Chance();
+
 class DynamoDB {
 	batchGetItem(params, callback) {
 		const TableName = Object.keys(params.RequestItems)[0];
@@ -80,6 +85,22 @@ class DynamoDB {
 		});
 	}
 
+	query(params, callback) {
+		const type = params.ExpressionAttributeValues[`:key`].S.split(`:`)[1];
+		let Items = range(0, params.Limit).map(createObject(type));
+
+		const res = DynamoDB.setConsumedCapacity(params, {
+			Items,
+			Count: Items.length,
+			ScannedCount: Items.length,
+			LastEvaluatedKey: {attr1: {S: `foo`}, attr2: {S: `bar`}}
+		});
+
+		process.nextTick(() => {
+			callback(null, res);
+		});
+	}
+
 	static setConsumedCapacity(params, res) {
 		if (params.ReturnConsumedCapacity === `TOTAL`) {
 			res.ConsumedCapacity = {
@@ -116,3 +137,15 @@ class DynamoDB {
 }
 
 module.exports = DynamoDB;
+
+function createObject(type) {
+	return function () {
+		return {
+			type: {S: type},
+			id: {S: chance.guid()},
+			attributes: {M: {
+				title: {S: chance.word()}
+			}}
+		};
+	};
+}
