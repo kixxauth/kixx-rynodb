@@ -203,7 +203,7 @@ module.exports = (t) => {
 
 		t.before((done) => {
 			// Override the backoffMultiplier
-			return dynamodbBatchRemoveObjects({backoffMultiplier: 10000}, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects({backoffMultiplier: 100}, SCOPE, keys).then((res) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
@@ -321,7 +321,7 @@ module.exports = (t) => {
 			if (count <= 1) {
 				UnprocessedItems = clone(params.RequestItems);
 				// "Process" 1 item by popping off the first item using tail().
-				UnprocessedItems[TABLE_NAME].Keys = tail(UnprocessedItems[TABLE_NAME].Keys);
+				UnprocessedItems[TABLE_NAME] = tail(UnprocessedItems[TABLE_NAME]);
 			}
 
 			let res = {
@@ -428,7 +428,7 @@ module.exports = (t) => {
 
 			assert.isEqual(1, requests.length, `requests.length`);
 
-			const req = requests[0];
+			const req = requests[0].DeleteRequest;
 			const key = keys[25];
 
 			assert.isEqual(key.type, req.Key.scope_type_key.S.split(`:`)[1], `key type`);
