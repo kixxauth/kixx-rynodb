@@ -259,8 +259,7 @@ module.exports = (t) => {
 		let ELAPSED;
 
 		t.before((done) => {
-			// TODO: backoffMultiplier: 10
-			return dynamodbBatchRemoveObjects({backoffMultiplier: 1}, SCOPE, keys).then((res) => {
+			return dynamodbBatchRemoveObjects({backoffMultiplier: 10}, SCOPE, keys).then((res) => {
 				return done(new Error(`should not resolve`));
 			}).catch((err) => {
 				ERROR = err;
@@ -547,7 +546,7 @@ module.exports = (t) => {
 		t.it(`rejects with a StackedError`, () => {
 			assert.isEqual(`StackedError`, ERROR.name, `error name`);
 			assert.isEqual(`ResourceNotFoundException`, ERROR.errors[0].name, `root error name`);
-			assert.isEqual(`Missing DynamoDB table "${TABLE_NAME}"`, ERROR.message, `error message`);
+			assert.isEqual(`Missing DynamoDB table "${TABLE_NAME}": TEST`, ERROR.message, `error message`);
 		});
 	});
 };

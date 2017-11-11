@@ -574,7 +574,7 @@ module.exports = (t) => {
 		t.it(`rejects with a StackedError`, () => {
 			assert.isEqual(`StackedError`, ERROR.name, `error name`);
 			assert.isEqual(`ResourceNotFoundException`, ERROR.errors[0].name, `root error name`);
-			assert.isEqual(`Missing DynamoDB table "${TABLE_NAME}"`, ERROR.message, `error message`);
+			assert.isEqual(`Missing DynamoDB table "${TABLE_NAME}": TEST`, ERROR.message, `error message`);
 		});
 	});
 };
