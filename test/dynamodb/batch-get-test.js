@@ -2,8 +2,7 @@
 
 const ddb = require(`../../lib/dynamodb`);
 const DynamoDB = require(`../test-support/mocks/dynamodb`);
-const {clone, tail, take, range} = require(`ramda`);
-const {assert} = require(`kixx/library`);
+const {assert, clone, tail, take, range} = require(`kixx/library`);
 const sinon = require(`sinon`);
 const Chance = require(`chance`);
 const ProvisionedThroughputExceededException = require(`../test-support/mocks/provisioned-throughput-exceeded-exception`);

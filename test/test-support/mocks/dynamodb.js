@@ -1,6 +1,6 @@
 'use strict';
 
-const {range} = require(`ramda`);
+const {range} = require(`kixx/library`);
 const Chance = require(`chance`);
 
 const chance = new Chance();
