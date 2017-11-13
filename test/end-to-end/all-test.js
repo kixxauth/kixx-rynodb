@@ -7,6 +7,7 @@ const AWS = require(`aws-sdk`);
 
 const createDocument = require(`../test-support/create-document`);
 const dynaliteServer = require(`../test-support/dynalite-server`);
+const {reportFullStackTrace} =require(`../test-support/library`);
 const {transactionFactory, setupSchema} = require(`../../index`);
 
 const config = require(`./config`);
@@ -86,7 +87,7 @@ module.exports = (t) => {
 					done();
 					return null;
 				})
-				.catch(done);
+				.catch(reportFullStackTrace(done));
 		});
 
 		t.after((done) => {
