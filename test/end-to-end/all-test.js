@@ -33,7 +33,8 @@ module.exports = (t) => {
 
 		const documents = range(0, 1000).map(createDocument).map(deepFreeze);
 
-		const results = Object.create(null);
+		const resultsA = Object.create(null);
+		const resultsB = Object.create(null);
 
 		const createTransaction = transactionFactory({
 			events,
@@ -64,20 +65,24 @@ module.exports = (t) => {
 					});
 				})
 				.then(() => {
-					return setupSchema({
-						dynamodb,
-						dynamodbTablePrefix: `test`
+					return txn.batchSet({scope: params.scope, objects: documents}).then((res) => {
+						resultsA.batchSetAllDocuments = res;
+						return null;
 					});
 				})
 				.then(() => {
-					return txn.batchSet({scope: params.scope, objects: documents}).then((res) => {
-						results.batchSetAllDocuments = res;
+					const keys = documents.map((doc) => {
+						return {type: doc.type, id: doc.id};
+					});
+					return txn.batchGet({scope: params.scope, keys}).then((res) => {
+						resultsA.batchGetAllDocuments = res;
 						return null;
 					});
 				})
 				.then(txn.commit)
 				.then(() => {
-					deepFreeze(results);
+					deepFreeze(resultsA);
+					deepFreeze(resultsB);
 					done();
 					return null;
 				})
@@ -101,8 +106,30 @@ module.exports = (t) => {
 				.catch(done);
 		});
 
-		t.it(`is not smoking`, () => {
-			assert.isOk(false, `smoking`);
+		t.describe(`batchSet`, (t) => {
+			t.it(`returns copies of all set objects`, () => {
+				const data = resultsA.batchSetAllDocuments.data;
+
+				assert.isOk(Array.isArray(data), `is Array`);
+				assert.isGreaterThan(0, data.length, `length > 0`);
+				assert.isEqual(data.length, documents.length, `data.length`);
+
+				data.forEach((obj, i) => {
+					assert.isNotEqual(obj, documents[i], `objects are not referencial equal`);
+					assert.isEqual(obj.type, documents[i].type, `type matches`);
+					assert.isEqual(obj.id, documents[i].id, `id matches`);
+				});
+			});
+		});
+
+		t.describe(`batchGet in same transaction`, (t) => {
+			t.it(`returns all documents`, () => {
+				const data = resultsA.batchGetAllDocuments.data;
+
+				assert.isOk(Array.isArray(data), `is Array`);
+				assert.isGreaterThan(0, data.length, `length > 0`);
+				assert.isEqual(data.length, documents.length, `data.length`);
+			});
 		});
 	});
 };
