@@ -9,9 +9,15 @@
   },
   "author": "Kris Walker (www.kixx.name)",
   "license": "MIT",
+  "peerDependencies": {
+    "aws-sdk": "^2.0.0",
+    "bluebird": "^3.0.0"
+  },
   "devDependencies": {
-    "aws-sdk": "^2.141.0",
+    "aws-sdk": "^2.0.0",
+    "bluebird": "^3.0.0",
     "chance": "~1.0.0",
+    "dynalite": "1.2.0",
     "eslint": "4.10.0",
     "kixx-test-node": "1.0.0",
     "sinon": "4.0.2"

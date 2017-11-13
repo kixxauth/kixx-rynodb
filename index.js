@@ -1,4 +1,4 @@
 'use strict';
 
-exports.initialize = () => {
-};
+exports.setupSchema = require(`./lib/setup-schema`);
+exports.transactionFactory = require(`./lib/transaction-factory`);
