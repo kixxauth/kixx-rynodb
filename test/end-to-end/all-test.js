@@ -2,13 +2,15 @@
 
 const Promise = require(`bluebird`);
 const {EventBus} = require(`kixx`);
-const {assert, deepFreeze, range} = require(`kixx/library`);
+const {deepFreeze, range} = require(`kixx/library`);
 const AWS = require(`aws-sdk`);
 
 const createDocument = require(`../test-support/create-document`);
 const dynaliteServer = require(`../test-support/dynalite-server`);
 const {reportFullStackTrace} =require(`../test-support/library`);
 const {transactionFactory, setupSchema} = require(`../../index`);
+
+const testGet = require(`./test-get`);
 
 const config = require(`./config`);
 
@@ -25,22 +27,21 @@ module.exports = (t) => {
 			secretAccessKey: config.DYNAMODB_SECRET_ACCESS_KEY
 		});
 
-		const params = deepFreeze({
-			scope: `all-test-scope`,
-			type: `testDoc`,
-			events,
-			dynamodb
-		});
-
 		const documents = range(0, 1000).map(createDocument).map(deepFreeze);
-
-		const resultsA = Object.create(null);
-		const resultsB = Object.create(null);
 
 		const createTransaction = transactionFactory({
 			events,
 			dynamodb,
 			dynamodbTablePrefix: `test`
+		});
+
+		const params = Object.freeze({
+			scope: `all-test-scope`,
+			type: `testDoc`,
+			events,
+			dynamodb,
+			createTransaction,
+			documents
 		});
 
 		t.before((done) => {
@@ -66,26 +67,13 @@ module.exports = (t) => {
 					});
 				})
 				.then(() => {
-					return txn.batchSet({scope: params.scope, objects: documents}).then((res) => {
-						resultsA.batchSetAllDocuments = res;
-						return null;
-					});
+					return txn.batchSet({scope: params.scope, objects: documents});
 				})
 				.then(() => {
-					const keys = documents.map((doc) => {
-						return {type: doc.type, id: doc.id};
-					});
-					return txn.batchGet({scope: params.scope, keys}).then((res) => {
-						resultsA.batchGetAllDocuments = res;
-						return null;
-					});
+					return txn.commit();
 				})
-				.then(txn.commit)
 				.then(() => {
-					deepFreeze(resultsA);
-					deepFreeze(resultsB);
-					done();
-					return null;
+					return done();
 				})
 				.catch(reportFullStackTrace(done));
 		});
@@ -107,30 +95,6 @@ module.exports = (t) => {
 				.catch(done);
 		});
 
-		t.describe(`batchSet`, (t) => {
-			t.it(`returns copies of all set objects`, () => {
-				const data = resultsA.batchSetAllDocuments.data;
-
-				assert.isOk(Array.isArray(data), `is Array`);
-				assert.isGreaterThan(0, data.length, `length > 0`);
-				assert.isEqual(data.length, documents.length, `data.length`);
-
-				data.forEach((obj, i) => {
-					assert.isNotEqual(obj, documents[i], `objects are not referencial equal`);
-					assert.isEqual(obj.type, documents[i].type, `type matches`);
-					assert.isEqual(obj.id, documents[i].id, `id matches`);
-				});
-			});
-		});
-
-		t.describe(`batchGet in same transaction`, (t) => {
-			t.it(`returns all documents`, () => {
-				const data = resultsA.batchGetAllDocuments.data;
-
-				assert.isOk(Array.isArray(data), `is Array`);
-				assert.isGreaterThan(0, data.length, `length > 0`);
-				assert.isEqual(data.length, documents.length, `data.length`);
-			});
-		});
+		testGet(t, params);
 	});
 };
