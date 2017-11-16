@@ -1,7 +1,8 @@
 'use strict';
 
-const {assert} = require(`kixx/library`);
+const {assert, find} = require(`kixx/library`);
 const Chance = require(`chance`);
+const {hasKey} = require(`../../lib/library`);
 
 const {reportFullStackTrace} =require(`../test-support/library`);
 
@@ -68,7 +69,7 @@ module.exports = function (t, params) {
 			});
 		});
 
-		t.describe(`with include`, (t) => {
+		t.describe(`with include 2:1`, (t) => {
 			const collection = collections[0];
 			const key = {type: collection.type, id: collection.id};
 			const include = [`foos`, `bars`];
@@ -102,8 +103,51 @@ module.exports = function (t, params) {
 					.catch(reportFullStackTrace(done));
 			});
 
-			t.it(`is not smoking`, () => {
-				assert.isOk(true, `smoking`);
+			t.it(`retrieved the correct non cached object`, () => {
+				const obj = noCacheResponse.data;
+				assert.isEqual(collection.type, obj.type, `type`);
+				assert.isEqual(collection.id, obj.id, `id`);
+				assert.isEqual(collection.attributes.title, obj.attributes.title, `attributes.title`);
+			});
+
+			t.it(`retrieved the correct cached object`, () => {
+				const obj = cachedResponse.data;
+				assert.isEqual(collection.type, obj.type, `type`);
+				assert.isEqual(collection.id, obj.id, `id`);
+				assert.isEqual(collection.attributes.title, obj.attributes.title, `attributes.title`);
+			});
+
+			t.it(`retrieved the correct non cached relationships`, () => {
+				const included = noCacheResponse.included;
+				const rel = (collection.relationships.foos || []).concat(collection.relationships.bars || []);
+
+				assert.isEqual(rel.length, included.length, `length`);
+				assert.isGreaterThan(100, rel.length, `more than 100`);
+
+				rel.forEach((key) => {
+					assert.isOk(find(hasKey(key), included, `has key`));
+				});
+			});
+
+			t.it(`retrieved the correct cached relationships`, () => {
+				const included = cachedResponse.included;
+				const rel = (collection.relationships.foos || []).concat(collection.relationships.bars || []);
+
+				assert.isEqual(rel.length, included.length, `length`);
+				assert.isGreaterThan(100, rel.length, `more than 100`);
+
+				rel.forEach((key) => {
+					assert.isOk(find(hasKey(key), included, `has key`));
+				});
+			});
+
+			t.it(`appropriately used the transaction cache`, () => {
+				const cachedMeta = cachedResponse.meta[0];
+				const noCachedMeta = noCacheResponse.meta[0];
+				assert.isOk(cachedMeta.transactionCacheHit, `meta.transactionCacheHit`);
+				assert.isNotOk(noCachedMeta.transactionCacheHit, `meta.transactionCacheHit`);
+				assert.isGreaterThan(100, noCacheElapsed, `noCacheElapsed`);
+				assert.isLessThan(30, withCacheElapsed, `withCacheElapsed`);
 			});
 		});
 	});
