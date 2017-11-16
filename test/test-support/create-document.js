@@ -6,9 +6,10 @@ const Chance = require(`chance`);
 const chance = new Chance();
 
 module.exports = function createDocument(spec) {
+	spec = spec || {};
 	return Object.assign({
-		type: chance.pickone([`fooType`, `barType`]),
-		id: chance.guid(),
+		type: spec.type || chance.pickone([`fooType`, `barType`]),
+		id: spec.id || chance.guid(),
 		attributes: {
 			title: range(0, random(2, 7)).map(() => chance.word()).join(` `),
 			description: chance.sentence(),

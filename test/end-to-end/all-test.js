@@ -27,7 +27,38 @@ module.exports = (t) => {
 			secretAccessKey: config.DYNAMODB_SECRET_ACCESS_KEY
 		});
 
-		const documents = range(0, 1000).map(createDocument).map(deepFreeze);
+		const documents = Object.freeze(range(0, 1000).map(createDocument).map(deepFreeze));
+
+		const collection1 = createDocument({type: `testCollection`});
+		const collection2 = createDocument({type: `testCollection`});
+		const collection3 = createDocument({type: `testCollection`});
+
+		collection1.relationships = {
+			foos: documents.slice(0, 200).map((d) => {
+				return {type: d.type, id: d.id};
+			})
+		};
+
+		collection2.relationships = {
+			bars: documents.slice(0, 50).map((d) => {
+				return {type: d.type, id: d.id};
+			})
+		};
+
+		collection3.relationships = {
+			foos: documents.slice(0, 10).map((d) => {
+				return {type: d.type, id: d.id};
+			}),
+			bars: documents.slice(10, 20).map((d) => {
+				return {type: d.type, id: d.id};
+			})
+		};
+
+		const collections = Object.freeze([
+			deepFreeze(collection1),
+			deepFreeze(collection2),
+			deepFreeze(collection3)
+		]);
 
 		const createTransaction = transactionFactory({
 			events,
@@ -37,11 +68,11 @@ module.exports = (t) => {
 
 		const params = Object.freeze({
 			scope: `all-test-scope`,
-			type: `testDoc`,
 			events,
 			dynamodb,
 			createTransaction,
-			documents
+			documents,
+			collections
 		});
 
 		t.before((done) => {
@@ -67,7 +98,16 @@ module.exports = (t) => {
 					});
 				})
 				.then(() => {
-					return txn.batchSet({scope: params.scope, objects: documents});
+					return txn.batchSet({
+						scope: params.scope,
+						objects: documents
+					});
+				})
+				.then(() => {
+					return txn.batchSet({
+						scope: params.scope,
+						objects: collections
+					});
 				})
 				.then(() => {
 					return txn.commit();
