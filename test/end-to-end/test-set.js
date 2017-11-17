@@ -4,7 +4,7 @@ const {assert} = require(`kixx/library`);
 const Chance = require(`chance`);
 
 const createDocument = require(`../test-support/create-document`);
-const {reportFullStackTrace} =require(`../test-support/library`);
+const {reportFullStackTrace} = require(`../test-support/library`);
 
 const chance = new Chance();
 

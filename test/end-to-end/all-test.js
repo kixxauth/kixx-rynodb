@@ -12,6 +12,7 @@ const {transactionFactory, setupSchema} = require(`../../index`);
 
 const testGet = require(`./test-get`);
 const testSet = require(`./test-set`);
+const testRemove = require(`./test-remove`);
 
 const config = require(`./config`);
 
@@ -138,5 +139,6 @@ module.exports = (t) => {
 
 		testGet(t, params);
 		testSet(t, params);
+		testRemove(t, params);
 	});
 };
