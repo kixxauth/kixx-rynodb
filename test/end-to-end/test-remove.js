@@ -35,7 +35,11 @@ module.exports = function (t, params) {
 						});
 					})
 					.then(() => {
-						return createTransaction().batchSet({scope, objects: relatedObjects});
+						return createTransaction().batchSet({
+							scope,
+							objects: relatedObjects,
+							isolated: true
+						});
 					})
 					.then(() => {
 						return createTransaction().remove({scope, key}).then((res) => {
@@ -53,7 +57,6 @@ module.exports = function (t, params) {
 						const keys = relatedObjects.map((obj) => {
 							return {type: obj.type, id: obj.id};
 						});
-						console.log(` ---- Fetching related ----`);
 						return createTransaction().batchGet({scope, keys}).then((res) => {
 							fetchRelated = res;
 							return null;
@@ -83,10 +86,12 @@ module.exports = function (t, params) {
 				assert.isEqual(null, fetchAfterRemove.data, `fetchAfterRemove.data`);
 			});
 
-			t.it(`is not smoking`, () => {
-				console.log(`*** fetchRelated`);
-				console.log(fetchRelated.data.map((x) => x.relationships.foos));
-				assert.isOk(false, `smoking`);
+			t.it(`removed relationship references`, () => {
+				const data = fetchRelated.data;
+				assert.isEqual(relatedObjects.length, data.length, `length`);
+				data.forEach((item) => {
+					assert.isEqual(0, item.relationships.foos.length, `relationships.foos`);
+				});
 			});
 		});
 	});

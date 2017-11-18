@@ -102,13 +102,15 @@ module.exports = (t) => {
 				.then(() => {
 					return txn.batchSet({
 						scope: params.scope,
-						objects: documents
+						objects: documents,
+						isolated: true
 					});
 				})
 				.then(() => {
 					return txn.batchSet({
 						scope: params.scope,
-						objects: collections
+						objects: collections,
+						isolated: true
 					});
 				})
 				.then(() => {
