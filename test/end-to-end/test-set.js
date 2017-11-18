@@ -1,6 +1,6 @@
 'use strict';
 
-const {assert} = require(`kixx/library`);
+const {assert, assoc} = require(`kixx/library`);
 const Chance = require(`chance`);
 
 const createDocument = require(`../test-support/create-document`);
@@ -16,8 +16,14 @@ module.exports = function (t, params) {
 			const doc = createDocument({type: `testSetType`});
 			const key = {type: doc.type, id: doc.id};
 
+			const relatedObject = documents.slice(202, 203).map((x) => {
+				const relationships = {foos: [{type: doc.type, id: doc.id}]};
+				return assoc(`relationships`, relationships, x);
+			})[0];
+
 			let response;
 			let fetched;
+			let fetchRelated;
 
 			t.before((done) => {
 				createTransaction().set({scope, object: doc})
@@ -26,8 +32,25 @@ module.exports = function (t, params) {
 						return null;
 					})
 					.then(() => {
+						return createTransaction().set({
+							scope,
+							object: relatedObject,
+							isolated: true
+						});
+					})
+					.then(() => {
 						return createTransaction().get({scope, key}).then((res) => {
 							fetched = res;
+							return null;
+						});
+					})
+					.then(() => {
+						return createTransaction().remove({scope, key});
+					})
+					.then(() => {
+						const key = {type: relatedObject.type, id: relatedObject.id};
+						return createTransaction().get({scope, key}).then((res) => {
+							fetchRelated = res;
 							return null;
 						});
 					})
@@ -56,6 +79,11 @@ module.exports = function (t, params) {
 			t.it(`cannot use the cache on a separate transaction`, () => {
 				const meta = fetched.meta[0];
 				assert.isEqual(false, meta.transactionCacheHit, `no transactionCacheHit`);
+			});
+
+			t.it(`linked relationship references for removal`, () => {
+				const data = fetchRelated.data;
+				assert.isEqual(0, data.relationships.foos.length, `relationships.foos`);
 			});
 		});
 
