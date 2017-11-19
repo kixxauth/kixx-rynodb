@@ -15,6 +15,7 @@ const testSet = require(`./test-set`);
 const testRemove = require(`./test-remove`);
 const testBatchGet = require(`./test-batch-get`);
 const testBatchSet = require(`./test-batch-set`);
+const testBatchRemove = require(`./test-batch-remove`);
 
 const config = require(`./config`);
 
@@ -147,5 +148,6 @@ module.exports = (t) => {
 		testRemove(t, params);
 		testBatchGet(t, params);
 		testBatchSet(t, params);
+		testBatchRemove(t, params);
 	});
 };
