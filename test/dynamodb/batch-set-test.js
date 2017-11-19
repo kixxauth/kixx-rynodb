@@ -30,6 +30,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -37,6 +39,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `baz`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Baz`
 				}
@@ -138,6 +142,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -221,6 +227,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -292,6 +300,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -299,6 +309,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `baz`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Baz`
 				}
@@ -395,6 +407,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -402,6 +416,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `baz`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Baz`
 				}
@@ -607,6 +623,8 @@ module.exports = (t) => {
 			{
 				type: `foo`,
 				id: `bar`,
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 				attributes: {
 					title: `Foo Bar`
 				}
@@ -636,6 +654,8 @@ function createObject() {
 	return {
 		type: chance.pickone([`foo`, `bar`]),
 		id: chance.guid(),
+		created: new Date().toISOString(),
+		updated: new Date().toISOString(),
 		attributes: {
 			title: chance.word()
 		}

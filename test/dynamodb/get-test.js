@@ -4,6 +4,8 @@ const ddb = require(`../../lib/dynamodb`);
 const DynamoDB = require(`../test-support/mocks/dynamodb`);
 const {assert} = require(`kixx/library`);
 const sinon = require(`sinon`);
+
+const {reportFullStackTrace} = require(`../test-support/library`);
 const ProvisionedThroughputExceededException = require(`../test-support/mocks/provisioned-throughput-exceeded-exception`);
 const ResourceNotFoundException = require(`../test-support/mocks/resource-not-found-exception`);
 
@@ -34,7 +36,7 @@ module.exports = (t) => {
 			return dynamodbGetObject(null, SCOPE, key).then((res) => {
 				RESULT = res;
 				return done();
-			}).catch(done);
+			}).catch(reportFullStackTrace(done));
 		});
 
 		t.it(`returns the object referenced by the key`, () => {
@@ -175,7 +177,7 @@ module.exports = (t) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
-			}).catch(done);
+			}).catch(reportFullStackTrace(done));
 		});
 
 		t.it(`returns the object referenced by the key`, () => {

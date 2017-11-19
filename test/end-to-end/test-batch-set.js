@@ -1,6 +1,6 @@
 'use strict';
 
-const {assert, find, assoc, range} = require(`kixx/library`);
+const {assert, find, assoc, range, deepFreeze, clone} = require(`kixx/library`);
 const Chance = require(`chance`);
 const {hasKey} = require(`../../lib/library`);
 
@@ -80,6 +80,8 @@ module.exports = function (t, params) {
 					assert.isEqual(doc.type, data.type, `type`);
 					assert.isEqual(doc.id, data.id, `id`);
 					assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(data.meta.created, `meta.created`);
+					assert.isNonEmptyString(data.meta.updated, `meta.updated`);
 				});
 			});
 
@@ -87,11 +89,13 @@ module.exports = function (t, params) {
 				const items = fetched.data;
 				assert.isEqual(objects.length, items.length, `length`);
 				items.forEach((data) => {
-					const doc = find(hasKey(data), objects);
+					const doc = find(hasKey(data), response.data);
 					assert.isNotEqual(doc, data, `is !==`);
 					assert.isEqual(doc.type, data.type, `type`);
 					assert.isEqual(doc.id, data.id, `id`);
 					assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+					assert.isEqual(doc.meta.created, data.meta.created, `meta.created`);
+					assert.isEqual(doc.meta.updated, data.meta.updated, `meta.updated`);
 				});
 			});
 
@@ -182,6 +186,8 @@ module.exports = function (t, params) {
 					assert.isEqual(doc.type, data.type, `type`);
 					assert.isEqual(doc.id, data.id, `id`);
 					assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(data.meta.created, `meta.created`);
+					assert.isNonEmptyString(data.meta.updated, `meta.updated`);
 				});
 			});
 
@@ -210,12 +216,15 @@ module.exports = function (t, params) {
 				return Object.freeze({type: obj.type, id: obj.id});
 			});
 
+			let originals;
 			let response;
 			let fetched;
 
 			t.before((done) => {
 				txn.batchGet({scope, keys})
 					.then((res) => {
+						originals = res.data.map((x) => deepFreeze(clone(x)));
+
 						const objects = res.data.map((obj) => {
 							obj.attributes.title = `Test batchSet() Title`;
 							return obj;
@@ -259,6 +268,16 @@ module.exports = function (t, params) {
 					assert.isEqual(doc.type, data.type, `type`);
 					assert.isEqual(doc.id, data.id, `id`);
 					assert.isEqual(`Test batchSet() Title`, data.attributes.title, `attributes.title`);
+				});
+			});
+
+			t.it(`correctly updates meta data`, () => {
+				const items = fetched.data;
+				assert.isEqual(keys.length, items.length, `length`);
+				items.forEach((data) => {
+					const original = find(hasKey(data), originals);
+					assert.isEqual(original.meta.created, data.meta.created, `created`);
+					assert.isGreaterThan(original.meta.created, data.meta.updated, `updated`);
 				});
 			});
 

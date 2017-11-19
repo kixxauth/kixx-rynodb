@@ -50,6 +50,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, obj.type, `type`);
 				assert.isEqual(doc.id, obj.id, `id`);
 				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.meta.created, `meta.created`);
+				assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 			});
 
 			t.it(`retrieved the correct cached object`, () => {
@@ -57,6 +59,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, obj.type, `type`);
 				assert.isEqual(doc.id, obj.id, `id`);
 				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.meta.created, `meta.created`);
+				assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 			});
 
 			t.it(`appropriately used the transaction cache`, () => {
@@ -108,6 +112,8 @@ module.exports = function (t, params) {
 				assert.isEqual(collection.type, obj.type, `type`);
 				assert.isEqual(collection.id, obj.id, `id`);
 				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.meta.created, `meta.created`);
+				assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 			});
 
 			t.it(`retrieved the correct cached object`, () => {
@@ -115,6 +121,8 @@ module.exports = function (t, params) {
 				assert.isEqual(collection.type, obj.type, `type`);
 				assert.isEqual(collection.id, obj.id, `id`);
 				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.meta.created, `meta.created`);
+				assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 			});
 
 			t.it(`retrieved the correct non cached relationships`, () => {

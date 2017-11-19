@@ -4,6 +4,8 @@ const ddb = require(`../../lib/dynamodb`);
 const DynamoDB = require(`../test-support/mocks/dynamodb`);
 const {assert} = require(`kixx/library`);
 const sinon = require(`sinon`);
+
+const {reportFullStackTrace} = require(`../test-support/library`);
 const ProvisionedThroughputExceededException = require(`../test-support/mocks/provisioned-throughput-exceeded-exception`);
 const ResourceNotFoundException = require(`../test-support/mocks/resource-not-found-exception`);
 
@@ -26,6 +28,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}
@@ -37,7 +41,7 @@ module.exports = (t) => {
 			return dynamodbSetObject(null, SCOPE, obj).then((res) => {
 				RESULT = res;
 				return done();
-			}).catch(done);
+			}).catch(reportFullStackTrace(done));
 		});
 
 		t.it(`returns a copy of the object as result data`, () => {
@@ -96,6 +100,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}
@@ -171,6 +177,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}
@@ -186,7 +194,7 @@ module.exports = (t) => {
 				RESULT = res;
 				ELAPSED = Date.now() - START;
 				return done();
-			}).catch(done);
+			}).catch(reportFullStackTrace(done));
 		});
 
 		t.it(`returns a copy of the object as result data`, () => {
@@ -228,6 +236,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}
@@ -269,6 +279,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}
@@ -311,6 +323,8 @@ module.exports = (t) => {
 		const obj = {
 			type: `foo`,
 			id: `bar`,
+			created: new Date().toISOString(),
+			updated: new Date().toISOString(),
 			attributes: {
 				title: `Foo Bar`
 			}

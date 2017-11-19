@@ -16,6 +16,7 @@ const testRemove = require(`./test-remove`);
 const testBatchGet = require(`./test-batch-get`);
 const testBatchSet = require(`./test-batch-set`);
 const testBatchRemove = require(`./test-batch-remove`);
+const testScan = require(`./test-scan`);
 
 const config = require(`./config`);
 
@@ -102,6 +103,13 @@ module.exports = (t) => {
 						dynamodbTablePrefix: `test`
 					});
 				})
+				// Repeat the setup to make sure it is idempotent.
+				.then(() => {
+					return setupSchema({
+						dynamodb,
+						dynamodbTablePrefix: `test`
+					});
+				})
 				.then(() => {
 					return txn.batchSet({
 						scope: params.scope,
@@ -149,5 +157,6 @@ module.exports = (t) => {
 		testBatchGet(t, params);
 		testBatchSet(t, params);
 		testBatchRemove(t, params);
+		testScan(t, params);
 	});
 };

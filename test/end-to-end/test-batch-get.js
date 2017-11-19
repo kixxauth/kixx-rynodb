@@ -53,6 +53,8 @@ module.exports = function (t, params) {
 				objects.forEach((obj) => {
 					const doc = find(hasKey(obj), documents);
 					assert.isNonEmptyString(doc.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(obj.meta.created, `meta.created`);
+					assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 				});
 			});
 
@@ -62,6 +64,8 @@ module.exports = function (t, params) {
 				objects.forEach((obj) => {
 					const doc = find(hasKey(obj), documents);
 					assert.isNonEmptyString(doc.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(obj.meta.created, `meta.created`);
+					assert.isNonEmptyString(obj.meta.updated, `meta.updated`);
 				});
 			});
 
@@ -72,8 +76,8 @@ module.exports = function (t, params) {
 				assert.isEqual(100, nonCachedMeta.transactionCacheMisses, `transactionCacheMisses`);
 				assert.isEqual(97, cachedMeta.transactionCacheHits, `transactionCacheHits`);
 				assert.isEqual(3, cachedMeta.transactionCacheMisses, `transactionCacheMisses`);
-				assert.isGreaterThan(50, batch1Elapsed, `non cached elapsed`);
-				assert.isLessThan(50, batch2Elapsed, `cached elapsed`);
+				assert.isGreaterThan(40, batch1Elapsed, `non cached elapsed`);
+				assert.isLessThan(40, batch2Elapsed, `cached elapsed`);
 			});
 		});
 	});

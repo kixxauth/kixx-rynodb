@@ -65,6 +65,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(data.meta.created, `meta.created`);
+				assert.isNonEmptyString(data.meta.updated, `meta.updated`);
 			});
 
 			t.it(`fetches a copy of the document`, () => {
@@ -73,6 +75,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isEqual(response.data.meta.created, data.meta.created, `meta.created`);
+				assert.isEqual(response.data.meta.updated, data.meta.updated, `meta.updated`);
 			});
 
 			t.it(`cannot use the cache on a separate transaction`, () => {
@@ -120,6 +124,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(data.meta.created, `meta.created`);
+				assert.isNonEmptyString(data.meta.updated, `meta.updated`);
 			});
 
 			t.it(`fetches a copy of the document`, () => {
@@ -128,6 +134,8 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isEqual(response.data.meta.created, data.meta.created, `meta.created`);
+				assert.isEqual(response.data.meta.updated, data.meta.updated, `meta.updated`);
 			});
 
 			t.it(`uses the cache on the same transaction`, () => {
@@ -141,12 +149,14 @@ module.exports = function (t, params) {
 			const key = {type: doc.type, id: doc.id};
 			const txn = createTransaction();
 
+			let original;
 			let response;
 			let fetched;
 
 			t.before((done) => {
 				txn.get({scope, key})
 					.then((res) => {
+						original = res.data;
 						const object = res.data;
 
 						// Make some changes to the object.
@@ -188,6 +198,12 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(`Test Set Title`, data.attributes.title, `attributes.title`);
+			});
+
+			t.it(`correctly updates meta data`, () => {
+				const data = fetched.data;
+				assert.isEqual(original.meta.created, data.meta.created, `created`);
+				assert.isGreaterThan(original.meta.created, data.meta.updated, `updated`);
 			});
 
 			t.it(`uses the cache on the same transaction`, () => {
