@@ -17,8 +17,7 @@ module.exports = function (t, params) {
 			const key = {type: doc.type, id: doc.id};
 
 			const relatedObject = documents.slice(202, 203).map((x) => {
-				const relationships = {foos: [{type: doc.type, id: doc.id}]};
-				return assoc(`relationships`, relationships, x);
+				return Object.freeze(assoc(`relationships`, {testSet: [key]}, x));
 			})[0];
 
 			let response;
@@ -77,13 +76,15 @@ module.exports = function (t, params) {
 			});
 
 			t.it(`cannot use the cache on a separate transaction`, () => {
-				const meta = fetched.meta[0];
-				assert.isEqual(false, meta.transactionCacheHit, `no transactionCacheHit`);
+				const responseMeta = response.meta[0];
+				const fetchedMeta = fetched.meta[0];
+				assert.isEqual(false, responseMeta.transactionCacheHit, `response transactionCacheHit`);
+				assert.isEqual(false, fetchedMeta.transactionCacheHit, `fetched transactionCacheHit`);
 			});
 
 			t.it(`linked relationship references for removal`, () => {
 				const data = fetchRelated.data;
-				assert.isEqual(0, data.relationships.foos.length, `relationships.foos`);
+				assert.isEqual(0, data.relationships.testSet.length, `relationships.testSet`);
 			});
 		});
 
@@ -149,7 +150,7 @@ module.exports = function (t, params) {
 						const object = res.data;
 
 						// Make some changes to the object.
-						object.attributes.title = `Foo Bar Baz`;
+						object.attributes.title = `Test Set Title`;
 						object.relationships.foos = documents.slice(0, 10).map((d) => {
 							return {type: d.type, id: d.id};
 						});
@@ -178,7 +179,7 @@ module.exports = function (t, params) {
 				assert.isNotEqual(doc, data, `is !==`);
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
-				assert.isEqual(`Foo Bar Baz`, data.attributes.title, `attributes.title`);
+				assert.isEqual(`Test Set Title`, data.attributes.title, `attributes.title`);
 			});
 
 			t.it(`fetches a copy of the document`, () => {
@@ -186,7 +187,7 @@ module.exports = function (t, params) {
 				assert.isNotEqual(doc, data, `is !==`);
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
-				assert.isEqual(`Foo Bar Baz`, data.attributes.title, `attributes.title`);
+				assert.isEqual(`Test Set Title`, data.attributes.title, `attributes.title`);
 			});
 
 			t.it(`uses the cache on the same transaction`, () => {

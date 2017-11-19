@@ -52,7 +52,7 @@ module.exports = function (t, params) {
 				assert.isEqual(batchKeys1.length, objects.length, `length`);
 				objects.forEach((obj) => {
 					const doc = find(hasKey(obj), documents);
-					assert.isEqual(doc.attributes.title, obj.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(doc.attributes.title, `attributes.title`);
 				});
 			});
 
@@ -61,7 +61,7 @@ module.exports = function (t, params) {
 				assert.isEqual(batchKeys2.length, objects.length, `length`);
 				objects.forEach((obj) => {
 					const doc = find(hasKey(obj), documents);
-					assert.isEqual(doc.attributes.title, obj.attributes.title, `attributes.title`);
+					assert.isNonEmptyString(doc.attributes.title, `attributes.title`);
 				});
 			});
 

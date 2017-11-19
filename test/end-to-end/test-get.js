@@ -49,14 +49,14 @@ module.exports = function (t, params) {
 				const obj = noCacheResponse.data;
 				assert.isEqual(doc.type, obj.type, `type`);
 				assert.isEqual(doc.id, obj.id, `id`);
-				assert.isEqual(doc.attributes.title, obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
 			});
 
 			t.it(`retrieved the correct cached object`, () => {
 				const obj = cachedResponse.data;
 				assert.isEqual(doc.type, obj.type, `type`);
 				assert.isEqual(doc.id, obj.id, `id`);
-				assert.isEqual(doc.attributes.title, obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
 			});
 
 			t.it(`appropriately used the transaction cache`, () => {
@@ -107,14 +107,14 @@ module.exports = function (t, params) {
 				const obj = noCacheResponse.data;
 				assert.isEqual(collection.type, obj.type, `type`);
 				assert.isEqual(collection.id, obj.id, `id`);
-				assert.isEqual(collection.attributes.title, obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
 			});
 
 			t.it(`retrieved the correct cached object`, () => {
 				const obj = cachedResponse.data;
 				assert.isEqual(collection.type, obj.type, `type`);
 				assert.isEqual(collection.id, obj.id, `id`);
-				assert.isEqual(collection.attributes.title, obj.attributes.title, `attributes.title`);
+				assert.isNonEmptyString(obj.attributes.title, `attributes.title`);
 			});
 
 			t.it(`retrieved the correct non cached relationships`, () => {
