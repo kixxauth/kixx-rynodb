@@ -1,6 +1,6 @@
 {
   "name": "kixx-rynodb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Redis enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,7 @@
   "bugs": {
     "url": "https://github.com/kixxauth/kixx-rynodb/issues"
   },
-  "homepage": "https://github.com/kixxauth/kixx-test#readme",
+  "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
   "peerDependencies": {
     "aws-sdk": "^2.0.0",
     "bluebird": "^3.0.0",
