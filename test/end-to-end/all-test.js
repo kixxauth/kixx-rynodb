@@ -24,7 +24,7 @@ module.exports = (t) => {
 	t.describe(`all`, (t) => {
 		let DynaliteServer;
 
-		const events = new EventBus();
+		const eventBus = new EventBus();
 
 		const dynamodb = new AWS.DynamoDB({
 			region: config.DYNAMODB_REGION,
@@ -67,14 +67,14 @@ module.exports = (t) => {
 		]);
 
 		const createTransaction = transactionFactory({
-			events,
+			eventBus,
 			dynamodb,
 			dynamodbTablePrefix: `test`
 		});
 
 		const params = Object.freeze({
 			scope: `all-test-scope`,
-			events,
+			eventBus,
 			dynamodb,
 			createTransaction,
 			documents,
