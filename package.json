@@ -1,7 +1,7 @@
 {
   "name": "kixx-rynodb",
   "version": "1.0.0",
-  "description": "A Redis enhanced Dynamodb store for Kixx",
+  "description": "A Redis enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
     "test": "eslint ./ && NODE_ENV=test kixx-test-node",
