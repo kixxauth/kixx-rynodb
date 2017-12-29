@@ -154,7 +154,7 @@ module.exports = function (t, params) {
 				const noCachedMeta = noCacheResponse.meta[0];
 				assert.isOk(cachedMeta.transactionCacheHit, `meta.transactionCacheHit`);
 				assert.isNotOk(noCachedMeta.transactionCacheHit, `meta.transactionCacheHit`);
-				assert.isGreaterThan(100, noCacheElapsed, `noCacheElapsed`);
+				assert.isGreaterThan(90, noCacheElapsed, `noCacheElapsed`);
 				assert.isLessThan(30, withCacheElapsed, `withCacheElapsed`);
 			});
 		});
