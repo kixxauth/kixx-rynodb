@@ -65,6 +65,7 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isEqual(doc.meta.foo, data.meta.foo, `meta.foo`);
 				assert.isNonEmptyString(data.meta.created, `meta.created`);
 				assert.isNonEmptyString(data.meta.updated, `meta.updated`);
 			});
@@ -75,6 +76,7 @@ module.exports = function (t, params) {
 				assert.isEqual(doc.type, data.type, `type`);
 				assert.isEqual(doc.id, data.id, `id`);
 				assert.isEqual(doc.attributes.title, data.attributes.title, `attributes.title`);
+				assert.isEqual(response.data.meta.foo, data.meta.foo, `meta.foo`);
 				assert.isEqual(response.data.meta.created, data.meta.created, `meta.created`);
 				assert.isEqual(response.data.meta.updated, data.meta.updated, `meta.updated`);
 			});

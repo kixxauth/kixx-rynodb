@@ -19,6 +19,9 @@ module.exports = function createDocument(spec) {
 					url: chance.url({extensions: [`jpg`, `png`]})
 				};
 			})
+		},
+		meta: {
+			foo: `bar`
 		}
 	}, spec);
 };
