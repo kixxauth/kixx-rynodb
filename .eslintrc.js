@@ -1,8 +1,9 @@
 module.exports = {
 	"parserOptions": {
-		"ecmaVersion": 6
+		"ecmaVersion": 2017
 	},
 	"env": {
+		"es6": true,
 		"node": true
 	},
 	"extends": "eslint:recommended",
@@ -16,6 +17,9 @@ module.exports = {
 		"no-var": [
 			"error"
 		],
+		"prefer-const": [
+			"error"
+		],
 		"one-var": [
 			"error",
 			"never"
@@ -23,6 +27,10 @@ module.exports = {
 		"no-unused-vars": [
 			"error",
 			{"args": "none"}
+		],
+		"no-use-before-define": [
+			"error",
+			{"functions": false, "classes": false}
 		],
 		"no-caller": [
 			"error"
@@ -54,6 +62,9 @@ module.exports = {
 			"error"
 		],
 		"no-undefined": [
+			"error"
+		],
+		"no-new-symbol": [
 			"error"
 		],
 		"no-labels": [
@@ -105,6 +116,9 @@ module.exports = {
 		"no-warning-comments": [
 			"warn",
 			{location: "anywhere"}
+		],
+		"eol-last": [
+			"error"
 		]
 	}
 };

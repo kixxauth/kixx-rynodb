@@ -151,6 +151,9 @@ module.exports = (t) => {
 
 		let count = 0;
 
+		// Input parameter.
+		const type = `foo`;
+
 		// Spy on the DynamoDB method.
 		sinon.stub(dynamodb, `query`).callsFake((params, callback) => {
 			// Increment the counter.
@@ -184,9 +187,6 @@ module.exports = (t) => {
 		const dynamodbScan = ddb.scanQuery(dynamodb, {
 			prefix
 		});
-
-		// Input parameter.
-		const type = `foo`;
 
 		let RESULT = null;
 		const START = Date.now();

@@ -145,7 +145,7 @@ module.exports = (t) => {
 					callback(new ProvisionedThroughputExceededException(`TEST`));
 				}
 
-				let res = {
+				const res = {
 					Item: JSON.parse(JSON.stringify(params.Key))
 				};
 

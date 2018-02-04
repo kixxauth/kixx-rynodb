@@ -187,7 +187,7 @@ module.exports = (t) => {
 					return key;
 				});
 
-				let res = {
+				const res = {
 					Responses,
 					UnprocessedItems: {},
 					foo: `bar`
@@ -346,7 +346,7 @@ module.exports = (t) => {
 				return key;
 			});
 
-			let res = {
+			const res = {
 				Responses,
 				UnprocessedItems,
 				foo: `bar`

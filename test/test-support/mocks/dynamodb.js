@@ -87,7 +87,7 @@ class DynamoDB {
 
 	query(params, callback) {
 		const type = params.ExpressionAttributeValues[`:key`].S.split(`:`)[1];
-		let Items = range(0, params.Limit).map(createObject(type));
+		const Items = range(0, params.Limit).map(createObject(type));
 
 		const res = DynamoDB.setConsumedCapacity(params, {
 			Items,

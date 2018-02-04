@@ -322,7 +322,7 @@ module.exports = (t) => {
 				UnprocessedItems[TABLE_NAME] = tail(UnprocessedItems[TABLE_NAME]);
 			}
 
-			let res = {
+			const res = {
 				UnprocessedItems,
 				foo: `bar`
 			};
