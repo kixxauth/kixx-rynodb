@@ -7,6 +7,8 @@ A enhanced Dynamodb store for [Kixx](https://github.com/kixxauth/kixx) applicati
 ### Entities Table
 Holds all database records as JSON serialized objects.
 
+__Name:__ PREFIX_entities_master
+
 __Record__
 
 ```js
@@ -21,8 +23,6 @@ __Record__
     meta: HASH_OBJECT
 }
 ```
-
-__Name:__ PREFIX_entities_master
 
 Key                   | Name           | Value
 --------------------- | -------------- | -----
@@ -39,6 +39,8 @@ Sort key      | updated        | The subject updated ISO Date String
 ### Relationships Table
 Holds all relationship entries as a subject -> predicat -> object tuple.
 
+__Name:__ PREFIX_relationship_entries
+
 __Record__
 
 ```js
@@ -50,11 +52,9 @@ __Record__
     index: INTEGER,
     subject_key: `${subject.scope}:${subject.type}:${subject.id}`,
     object_key: `${object_scope}:${object_type}:${object_id}`,
-    predicate_key: `${predicate}:${object_id}:${index}`
+    predicate_key: `${predicate}:${object_type}:${object_id}:${index}`
 }
 ```
-
-__Name:__ PREFIX_relationship_entries
 
 Key                   | Name          | Value
 --------------------- | ------------- | -----
@@ -73,6 +73,8 @@ Sort key      | index          | The object relationship index Integer
 ### Index Lookup Table
 Holds all index entries emittied from mapping functions.
 
+__Name:__ PREFIX_index_entries
+
 __Record__
 
 ```js
@@ -83,11 +85,10 @@ __Record__
     index_name: STRING, // Also the name of the map function.
     compound_key: STRING, // The index value created by the map function.
     subject_key: `${scope}:${type}:${id}`,
-    unique_key: `${index_name}:${compound_key}`
+    unique_key: `${index_name}:${compound_key}`,
+    scope_name: `${scope}:${index_name}`
 }
 ```
-
-__Name:__ PREFIX_index_entries
 
 Key                   | Name        | Value
 --------------------- | ----------- | -----
