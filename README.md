@@ -45,14 +45,17 @@ __Record__
 
 ```js
 {
+    subject_scope: STRING,
+    subject_type: STRING,
+    subject_id: STRING,
+    predicate: STRING,
+    index: INTEGER,
     object_scope: STRING,
     object_type: STRING,
     object_id: STRING,
-    predicate: STRING,
-    index: INTEGER,
     subject_key: `${subject.scope}:${subject.type}:${subject.id}`,
     object_key: `${object_scope}:${object_type}:${object_id}`,
-    predicate_key: `${predicate}:${object_type}:${object_id}:${index}`
+    predicate_key: `${predicate}:${index}:${object_type}:${object_id}`
 }
 ```
 
