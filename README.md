@@ -1,5 +1,5 @@
-Kixx
-====
+Kixx RynoDB
+===========
 A enhanced Dynamodb store for [Kixx](https://github.com/kixxauth/kixx) applications.
 
 ## DynamoDB Schema
