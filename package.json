@@ -20,7 +20,7 @@
   "peerDependencies": {
     "aws-sdk": "^2.0.0",
     "bluebird": "^3.0.0",
-    "kixx": "^0.3.0"
+    "kixx": "^0.17.0"
   },
   "devDependencies": {
     "aws-sdk": "2.188.0",
@@ -28,9 +28,14 @@
     "chance": "1.0.13",
     "dynalite": "1.2.0",
     "eslint": "4.17.0",
-    "kixx": "^0.3.0",
+    "kixx": "0.17.0",
     "kixx-test-node": "1.2.5",
     "ramda": "^0.25.0",
     "sinon": "4.2.2"
+  },
+  "dependencies": {
+    "crc": "3.5.0",
+    "csv": "2.0.0",
+    "numeral": "2.0.6"
   }
 }

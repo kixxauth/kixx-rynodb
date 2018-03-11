@@ -13,31 +13,31 @@ __Record__
 
 ```js
 {
-    scope: STRING,
-    type: STRING,
-    id: STRING,
-    scope_type_key: STRING,
-    created: ISO_DATE_STRING,
-    updated: ISO_DATE_STRING,
-    attributes: HASH_OBJECT,
-    meta: HASH_OBJECT
+    _scope: STRING,
+    _type: STRING,
+    _id: STRING,
+    _scope_type_key: STRING,
+    _created: ISO_DATE_STRING,
+    _updated: ISO_DATE_STRING,
+    _meta: HASH_OBJECT,
+    ...attributes
 }
 ```
 
-Key                   | Name           | Value
---------------------- | -------------- | -----
-Primary partition key | id             | The subject ID String
-Primary sort key      | scope_type_key | Compound SCOPE:TYPE String
+Key                   | Name              | Value
+--------------------- | ----------------- | -----
+Primary partition key | `_id`             | The subject ID String
+Primary sort key      | `_scope_type_key` | Compound SCOPE:TYPE String
 
 __Index name:__ PREFIX_entities_by_type
 
-Key           | Name           | Value
-------------- | -------------- | -----
-Partition key | scope_type_key | Compound SCOPE:TYPE String
-Sort key      | updated        | The subject updated ISO Date String
+Key           | Name              | Value
+------------- | ----------------- | -----
+Partition key | `_scope_type_key` | Compound SCOPE:TYPE String
+Sort key      | `_updated`        | The subject updated ISO Date String
 
 ### Relationships Table
-Holds all relationship entries as a subject -> predicat -> object tuple.
+Holds all relationship entries as a subject -> predicate -> object tuple.
 
 __Name:__ PREFIX_relationship_entries
 
@@ -45,33 +45,34 @@ __Record__
 
 ```js
 {
-    subject_scope: STRING,
-    subject_type: STRING,
-    subject_id: STRING,
-    predicate: STRING,
-    index: INTEGER,
-    object_scope: STRING,
-    object_type: STRING,
-    object_id: STRING,
-    subject_key: `${subject.scope}:${subject.type}:${subject.id}`,
-    object_key: `${object_scope}:${object_type}:${object_id}`,
-    predicate_key: `${predicate}:${index}:${object_type}:${object_id}`
+    _subject_scope: STRING,
+    _subject_type: STRING,
+    _subject_id: STRING,
+    _predicate: STRING,
+    _index: INTEGER,
+    _object_scope: STRING,
+    _object_type: STRING,
+    _object_id: STRING,
+    _subject_key: `${subject.scope}:${subject.type}:${subject.id}`,
+    _object_key: `${object_scope}:${object_type}:${object_id}`,
+    _predicate_key: `${predicate}:${index}:${object_type}:${object_id}`,
+    ...objectAttributes
 }
 ```
 
-Key                   | Name          | Value
---------------------- | ------------- | -----
-Primary partition key | subject_key   | Compound SCOPE:TYPE:ID String
-Primary sort key      | predicate_key | Compound PREDICATE:OBJECT:INDEX String
+Key                   | Name             | Value
+--------------------- | ---------------- | -----
+Primary partition key | `_subject_key`   | Compound SCOPE:TYPE:ID String
+Primary sort key      | `_predicate_key` | Compound PREDICATE:OBJECT:INDEX String
 
 *The compound PREDICATE:OBJECT:INDEX sort key allows us to store a object ID multiple times on the same subject->predicate*
 
 __Index name:__ PREFIX_reverse_relationships
 
-Key           | Name           | Value
-------------- | -------------- | -----
-Partition key | object_key     | Compound SCOPE:TYPE:ID String
-Sort key      | index          | The object relationship index Integer
+Key           | Name          | Value
+------------- | ------------- | -----
+Partition key | `_object_key` | Compound SCOPE:TYPE:ID String
+Sort key      | `_index`      | The object relationship index Integer
 
 ### Index Lookup Table
 Holds all index entries emittied from mapping functions.
@@ -82,28 +83,29 @@ __Record__
 
 ```js
 {
-    scope: STRING,
-    type: STRING,
-    id: STRING,
-    index_name: STRING, // Also the name of the map function.
-    compound_key: STRING, // The index value created by the map function.
-    subject_key: `${scope}:${type}:${id}`,
-    unique_key: `${index_name}:${compound_key}`,
-    scope_name: `${scope}:${index_name}`
+    _scope: STRING,
+    _type: STRING,
+    _id: STRING,
+    _index_name: STRING, // Also the name of the map function.
+    _compound_key: STRING, // The index value created by the map function.
+    _subject_key: `${scope}:${type}:${id}`,
+    _unique_key: `${index_name}:${compound_key}`,
+    _scope_index_name: `${scope}:${index_name}`,
+    ...attributes
 }
 ```
 
-Key                   | Name        | Value
---------------------- | ----------- | -----
-Primary partition key | subject_key | Compound SCOPE:TYPE:ID String
-Primary sort key      | unique_key  | Compound INDEX_NAME:COMPOUND_KEY String
+Key                   | Name           | Value
+--------------------- | -------------- | -----
+Primary partition key | `_subject_key` | Compound SCOPE:TYPE:ID String
+Primary sort key      | `_unique_key`  | Compound INDEX_NAME:COMPOUND_KEY String
 
 __Index name:__ PREFIX_index_lookup
 
-Key           | Name         | Value
-------------- | ------------ | -----
-Partition key | scope_name   | Compound SCOPE:INDEX_NAME String
-Sort key      | compound_key | The index value created by the map function.
+Key           | Name                | Value
+------------- | ------------------- | -----
+Partition key | `_scope_index_name` | Compound SCOPE:INDEX_NAME String
+Sort key      | `_compound_key`     | The index value created by the map function.
 
 ### Schema Use Cases
 
