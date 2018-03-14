@@ -20,6 +20,7 @@ __Record__
     _created: ISO_DATE_STRING,
     _updated: ISO_DATE_STRING,
     _meta: HASH_OBJECT,
+    _index_entries: HASH_OBJECT
     ...attributes
 }
 ```
@@ -87,9 +88,9 @@ __Record__
     _type: STRING,
     _id: STRING,
     _index_name: STRING, // Also the name of the map function.
-    _compound_key: STRING, // The index value created by the map function.
+    _index_key: STRING, // The index value created by the map function.
     _subject_key: `${scope}:${type}:${id}`,
-    _unique_key: `${index_name}:${compound_key}`,
+    _unique_key: `${index_name}:${index_key}`,
     _scope_index_name: `${scope}:${index_name}`,
     ...attributes
 }
@@ -105,7 +106,7 @@ __Index name:__ PREFIX_index_lookup
 Key           | Name                | Value
 ------------- | ------------------- | -----
 Partition key | `_scope_index_name` | Compound SCOPE:INDEX_NAME String
-Sort key      | `_compound_key`     | The index value created by the map function.
+Sort key      | `_index_key`     | The index value created by the map function.
 
 ### Schema Use Cases
 
