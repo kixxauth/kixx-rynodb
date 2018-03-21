@@ -99,7 +99,7 @@ __Record__
 Key                   | Name           | Value
 --------------------- | -------------- | -----
 Primary partition key | `_subject_key` | Compound SCOPE:TYPE:ID String
-Primary sort key      | `_unique_key`  | Compound INDEX_NAME:COMPOUND_KEY String
+Primary sort key      | `_unique_key`  | Compound INDEX_NAME:INDEX_KEY String
 
 __Index name:__ PREFIX_index_lookup
 
