@@ -4,7 +4,7 @@
   "description": "A Redis enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
-    "test": "eslint ./ && NODE_ENV=test kixx-test-node",
+    "test": "eslint ./",
     "lint": "eslint ./"
   },
   "author": "Kris Walker (www.kixx.name)",
@@ -21,10 +21,16 @@
     "kixx-assert": "1.0.5"
   },
   "peerDependencies": {
-    "bluebird": "^3.0.0"
+    "bluebird": "^3.0.0",
+    "kixx": ">=0.19.1",
+    "ramda": ">=0.25.0"
   },
   "devDependencies": {
     "bluebird": "^3.0.0",
-    "eslint": "4.19.0"
+    "chance": "1.0.13",
+    "debug": "3.1.0",
+    "eslint": "4.19.1",
+    "kixx": ">=0.19.2",
+    "ramda": ">=0.25.0"
   }
 }
