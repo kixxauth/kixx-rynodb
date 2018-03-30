@@ -130,14 +130,14 @@ tests.push(function with_setEntity() {
 		return promise.then(() => {
 			debug(`writing batch ${i + 1} of ${batches.length}`);
 			return Promise.all(batch.map((entity) => {
-				return dynamodb.setEntity(entity);
+				return dynamodb.setEntity(entity, {operationTimeout: 1500});
 			}));
 		});
 	}, Promise.resolve(null));
 });
 
 tests.push(function with_getEntity() {
-	debug(`get ${COUNT} entities, and then some`);
+	debug(`get ${COUNT} entities`);
 
 	// 1.3x number of batches to try to get throughput exceptions.
 	const fetchBatches = batches.concat(batches.slice(0, Math.round(batches.length * 0.3)));
@@ -150,12 +150,13 @@ tests.push(function with_getEntity() {
 				const key = {_id: entity._id, _scope_type_key: entity._scope_type_key};
 
 				if (n % 2 === 0) {
-					return dynamodb.getEntity(key);
+					return dynamodb.getEntity(key, {operationTimeout: 1500});
 				}
 
 				return dynamodb.getEntity(key, {
 					ExpressionAttributeNames: {'#id': '_id', '#key': '_scope_type_key'},
-					ProjectionExpression: '#id, #key'
+					ProjectionExpression: '#id, #key',
+					operationTimeout: 5000
 				});
 			}));
 		});
@@ -170,7 +171,7 @@ tests.push(function with_scanByType() {
 	const attempts = range(0, 10);
 
 	function consumeAsManyAsPossible() {
-		return dynamodb.scanByType({key}).then((res) => {
+		return dynamodb.scanByType({key}, {operationTimeout: 4000}).then((res) => {
 			debug(`scanByType() got ${res.Items.length} results`);
 		});
 	}
@@ -183,7 +184,7 @@ tests.push(function with_scanByType() {
 				ExclusiveStartKey
 			};
 
-			return dynamodb.scanByType(params).then((res) => {
+			return dynamodb.scanByType(params, {operationTimeout: 1000}).then((res) => {
 				debug(`scanByType() got page ${i}`);
 				if (res.LastEvaluatedKey) {
 					return getPage(res.LastEvaluatedKey, i + 1);
@@ -198,13 +199,13 @@ tests.push(function with_scanByType() {
 	return attempts.reduce((promise, i) => {
 		return promise.then(() => {
 			if (i % 2 === 0) return consumeAsManyAsPossible();
-			return consumeAll();
+			return consumeAll;
 		});
 	}, Promise.resolve(null));
 });
 
 tests.push(function with_removeEntity() {
-	debug(`delete ${COUNT} entities`);
+	debug(`get ${COUNT} entities`);
 
 	return batches.reduce((promise, batch, i) => {
 		return promise.then(() => {
@@ -212,7 +213,7 @@ tests.push(function with_removeEntity() {
 
 			return Promise.all(batch.map((entity, n) => {
 				const key = {_id: entity._id, _scope_type_key: entity._scope_type_key};
-				return dynamodb.removeEntity(key);
+				return dynamodb.removeEntity(key, {operationTimeout: 1500});
 			}));
 		});
 	}, Promise.resolve(null));
