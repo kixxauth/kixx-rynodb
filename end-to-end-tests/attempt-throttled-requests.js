@@ -3,219 +3,131 @@
 
 const Promise = require('bluebird');
 const EventEmitter = require('events');
-const Chance = require('chance');
 const DynamoDB = require('../lib/dynamodb');
-const {range, splitEvery} = require('kixx/library');
+const DynamoDbClient = require('../lib/dynamodb-client');
+const {assert, isObject, range} = require('kixx/library');
 const tools = require('./tools');
 
-const debug = tools.debug('attempt-throttled-requests');
+const debug = tools.debug('attempt-throttled-batch-requests');
+const {createTestRecord} = tools;
+
+const SCOPE = 'foo-bar';
+const TYPE = 'foobar';
 
 const {awsAccessKey, awsSecretKey, awsRegion} = tools.getAwsCredentials();
 
-const chance = new Chance();
-
-const tests = [];
-
 const emitter = new EventEmitter();
 
-const dynamodb = DynamoDB.create({
+const client = DynamoDbClient.create({
 	emitter,
-	tablePrefix: tools.TABLE_PREFIX,
 	awsRegion,
 	awsAccessKey,
 	awsSecretKey
 });
 
-let existingMessage = false;
+const tests = [];
 
-emitter.on('warning', (ev) => {
-	const {message} = ev;
-	if (message === existingMessage) return;
-	existingMessage = message;
-	debug(`warning event (may be many more): ${message}`);
-});
+const keys = [];
 
-const COUNT = 1000;
-const SCOPE = 'foo-bar';
-const TYPE = 'foobar';
+tests.push(function testBatchWriteItem() {
+	debug('test BatchWriteItem');
 
+	const makeRequest = () => {
+		debug('BatchWriteItem makeRequest');
 
-const generateId = (function () {
-	let i = 0;
-	return function generateId() {
-		i += 1;
-		return `${chance.guid()}-${i}`;
-	};
-}());
+		const ttt_root_entities = range(0, 25).map(() => {
+			const entity = createTestRecord(SCOPE, TYPE);
+			keys.push({_id: entity._id, _scope_type_key: entity._scope_type_key});
 
-const entities = range(0, COUNT).map((x, y, z, _) => {
+			const Item = DynamoDB.serializeObject(entity);
 
-	return {
-		_id: generateId(),
-		_scope_type_key: `${SCOPE}:${TYPE}`,
-		_updated: new Date().toISOString(),
-		undefinedValue: _,
-		nullValue: null,
-		nanValue: NaN,
-		zeroValue: 0,
-		integerValue: 1,
-		floatValue: 1.25,
-		functionValue: function myFunction() {},
-		emptyStringValue: '',
-		stringValue: 'x',
-		dateValue: new Date(),
-		booleanTrueValue: true,
-		booleanFalseValue: false,
-		emptyList: [],
-		listOfPrimitives: [_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []],
-		listOfLists: [
-			[_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []]
-		],
-		listOfHashes: [{
-			undefinedValue: _,
-			nullValue: null,
-			nanValue: NaN,
-			zeroValue: 0,
-			integerValue: 1,
-			floatValue: 1.25,
-			functionValue: function myFunction() {},
-			emptyStringValue: '',
-			stringValue: 'x',
-			dateValue: new Date(),
-			booleanTrueValue: true,
-			booleanFalseValue: false
-		}],
-		hash: {
-			undefinedValue: _,
-			nullValue: null,
-			nanValue: NaN,
-			zeroValue: 0,
-			integerValue: 1,
-			floatValue: 1.25,
-			functionValue: function myFunction() {},
-			emptyStringValue: '',
-			stringValue: 'x',
-			dateValue: new Date(),
-			booleanTrueValue: true,
-			booleanFalseValue: false
-		},
-		hashOfLists: {
-			A: [_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []]
-		},
-		hashOfHashes: {
-			A: {
-				undefinedValue: _,
-				nullValue: null,
-				nanValue: NaN,
-				zeroValue: 0,
-				integerValue: 1,
-				floatValue: 1.25,
-				functionValue: function myFunction() {},
-				emptyStringValue: '',
-				stringValue: 'x',
-				dateValue: new Date(),
-				booleanTrueValue: true,
-				booleanFalseValue: false
-			}
-		}
-	};
-});
-
-const batches = splitEvery(50, entities);
-
-tests.push(function with_setEntity() {
-	debug(`set ${COUNT} entities`);
-
-	return batches.reduce((promise, batch, i) => {
-		return promise.then(() => {
-			debug(`writing batch ${i + 1} of ${batches.length}`);
-			return Promise.all(batch.map((entity) => {
-				return dynamodb.setEntity(entity);
-			}));
+			return {PutRequest: {Item}};
 		});
-	}, Promise.resolve(null));
-});
 
-tests.push(function with_getEntity() {
-	debug(`get ${COUNT} entities, and then some`);
+		const params = {
+			RequestItems: {ttt_root_entities}
+		};
 
-	// 1.3x number of batches to try to get throughput exceptions.
-	const fetchBatches = batches.concat(batches.slice(0, Math.round(batches.length * 0.3)));
+		return client.request('BatchWriteItem', params).then((res) => {
+			const {UnprocessedItems} = res;
 
-	return fetchBatches.reduce((promise, batch, i) => {
-		return promise.then(() => {
-			debug(`fetching batch ${i + 1} of ${fetchBatches.length}`);
+			// UnprocessedItems is *always* present, but may be empty.
+			assert.isOk(isObject(UnprocessedItems));
 
-			return Promise.all(batch.map((entity, n) => {
-				const key = {_id: entity._id, _scope_type_key: entity._scope_type_key};
+			if (UnprocessedItems.ttt_root_entities) {
+				debug('BatchWriteItem got UnprocessedItems');
+				const {ttt_root_entities} = UnprocessedItems;
 
-				if (n % 2 === 0) {
-					return dynamodb.getEntity(key);
-				}
+				assert.isOk(Array.isArray(ttt_root_entities));
 
-				return dynamodb.getEntity(key, {
-					ExpressionAttributeNames: {'#id': '_id', '#key': '_scope_type_key'},
-					ProjectionExpression: '#id, #key'
+				ttt_root_entities.forEach((req) => {
+					const {PutRequest} = req;
+					assert.isOk(isObject(PutRequest));
 				});
-			}));
+			}
+
+			return makeRequest();
+		}, (err) => {
+			// After enough tries, even with UprocessedItems, there will eventually
+			// be a ProvisionedThroughputExceededException.
+			debug('BatchWriteItem got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
 		});
-	}, Promise.resolve(null));
+	};
+
+	return makeRequest();
 });
 
-tests.push(function with_scanByType() {
-	debug(`scan entities by type`);
+tests.push(function testBatchGetItem() {
+	debug('test BatchGetItem');
 
-	const key = `${SCOPE}:${TYPE}`;
+	const makeRequest = () => {
+		debug('BatchGetItem makeRequest');
 
-	const attempts = range(0, 10);
-
-	function consumeAsManyAsPossible() {
-		return dynamodb.scanByType({key}).then((res) => {
-			debug(`scanByType() got ${res.Items.length} results`);
-		});
-	}
-
-	function consumeAll() {
-		function getPage(ExclusiveStartKey, i) {
-			const params = {
-				key,
-				Limit: 100,
-				ExclusiveStartKey
+		const Keys = range(0, 25).map((i) => {
+			const key = keys[i];
+			return {
+				_id: {S: key._id},
+				_scope_type_key: {S: key._scope_type_key}
 			};
-
-			return dynamodb.scanByType(params).then((res) => {
-				debug(`scanByType() got page ${i}`);
-				if (res.LastEvaluatedKey) {
-					return getPage(res.LastEvaluatedKey, i + 1);
-				}
-				return null;
-			});
-		}
-
-		return getPage(null, 0);
-	}
-
-	return attempts.reduce((promise, i) => {
-		return promise.then(() => {
-			if (i % 2 === 0) return consumeAsManyAsPossible();
-			return consumeAll();
 		});
-	}, Promise.resolve(null));
-});
 
-tests.push(function with_removeEntity() {
-	debug(`delete ${COUNT} entities`);
+		const params = {
+			RequestItems: {
+				ttt_root_entities: {Keys}
+			}
+		};
 
-	return batches.reduce((promise, batch, i) => {
-		return promise.then(() => {
-			debug(`deleting batch ${i + 1} of ${batches.length}`);
+		return client.request('BatchGetItem', params).then((res) => {
+			const {UnprocessedKeys} = res;
 
-			return Promise.all(batch.map((entity, n) => {
-				const key = {_id: entity._id, _scope_type_key: entity._scope_type_key};
-				return dynamodb.removeEntity(key);
-			}));
+			// UnprocessedKeys is *always* present, but may be empty.
+			assert.isOk(isObject(UnprocessedKeys));
+
+			// UnprocessedKeys is rare. A ProvisionedThroughputExceededException is
+			// much more likely.
+			if (UnprocessedKeys.ttt_root_entities) {
+				debug('BatchGetItem got UnprocessedKeys');
+				const {ttt_root_entities} = UnprocessedKeys;
+
+				assert.isOk(isObject(ttt_root_entities));
+			}
+
+			// Make another request, trying to get to ProvisionedThroughputExceededException.
+			return makeRequest();
+		}, (err) => {
+			// After enough tries, even with UprocessedItems, there will eventually
+			// be a ProvisionedThroughputExceededException.
+			debug('BatchGetItem got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
 		});
-	}, Promise.resolve(null));
+	};
+
+	return makeRequest();
 });
 
 exports.main = function main() {

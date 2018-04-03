@@ -1,6 +1,7 @@
 /* eslint-disable no-process-env */
 'use strict';
 
+const {uuidV1} = require('kixx');
 const {isNonEmptyString} = require('kixx/library');
 const debug = require('debug');
 
@@ -52,5 +53,77 @@ exports.getAwsCredentials = () => {
 		awsAccessKey,
 		awsSecretKey,
 		awsRegion
+	};
+};
+
+exports.createTestRecord = function createTestRecord(scope, type, _) {
+	return {
+		_id: uuidV1(),
+		_scope_type_key: `${scope}:${type}`,
+		_updated: new Date().toISOString(),
+		undefinedValue: _,
+		nullValue: null,
+		nanValue: NaN,
+		zeroValue: 0,
+		integerValue: 1,
+		floatValue: 1.25,
+		functionValue: function myFunction() {},
+		emptyStringValue: '',
+		stringValue: 'x',
+		dateValue: new Date(),
+		booleanTrueValue: true,
+		booleanFalseValue: false,
+		emptyList: [],
+		listOfPrimitives: [_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []],
+		listOfLists: [
+			[_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []]
+		],
+		listOfHashes: [{
+			undefinedValue: _,
+			nullValue: null,
+			nanValue: NaN,
+			zeroValue: 0,
+			integerValue: 1,
+			floatValue: 1.25,
+			functionValue: function myFunction() {},
+			emptyStringValue: '',
+			stringValue: 'x',
+			dateValue: new Date(),
+			booleanTrueValue: true,
+			booleanFalseValue: false
+		}],
+		hash: {
+			undefinedValue: _,
+			nullValue: null,
+			nanValue: NaN,
+			zeroValue: 0,
+			integerValue: 1,
+			floatValue: 1.25,
+			functionValue: function myFunction() {},
+			emptyStringValue: '',
+			stringValue: 'x',
+			dateValue: new Date(),
+			booleanTrueValue: true,
+			booleanFalseValue: false
+		},
+		hashOfLists: {
+			A: [_, null, NaN, 0, 1, 1.25, function myFunction() {}, '', 'x', new Date(), true, false, []]
+		},
+		hashOfHashes: {
+			A: {
+				undefinedValue: _,
+				nullValue: null,
+				nanValue: NaN,
+				zeroValue: 0,
+				integerValue: 1,
+				floatValue: 1.25,
+				functionValue: function myFunction() {},
+				emptyStringValue: '',
+				stringValue: 'x',
+				dateValue: new Date(),
+				booleanTrueValue: true,
+				booleanFalseValue: false
+			}
+		}
 	};
 };
