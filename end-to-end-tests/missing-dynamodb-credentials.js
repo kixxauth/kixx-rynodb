@@ -3,29 +3,31 @@
 
 const Promise = require('bluebird');
 const EventEmitter = require('events');
-const DynamoDB = require('../lib/dynamodb');
+const DynamoDbClient = require('../lib/dynamodb-client');
 const {assert} = require('kixx/library');
 const tools = require('./tools');
 
 const debug = tools.debug('missing-dynamodb-credentials');
-
-const tests = [];
+const {targets} = tools;
 
 const emitter = new EventEmitter();
 
-const dynamodb = DynamoDB.create({
+const client = DynamoDbClient.create({
 	emitter,
-	tablePrefix: tools.TABLE_PREFIX,
 	awsRegion: 'us-east-1'
 });
 
-tests.push(function with_setEntity() {
-	debug(`setEntity()`);
-	return dynamodb.setEntity().catch((err) => {
-		assert.isEqual('UnrecognizedClientException', err.code);
-		assert.isMatch(/^DynamoDB request error/, err.message);
-		return null;
-	});
+const tests = targets.map(function (target) {
+	return function () {
+		debug(`target ${target}`);
+
+		return client.request(target, {}).catch(function (err) {
+			assert.isEqual('UnrecognizedClientException', err.name);
+			assert.isEqual('UnrecognizedClientException', err.code);
+			assert.isEqual('The security token included in the request is invalid.', err.message);
+			return null;
+		});
+	};
 });
 
 exports.main = function main() {

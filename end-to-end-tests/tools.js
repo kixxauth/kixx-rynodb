@@ -6,6 +6,29 @@ const debug = require('debug');
 
 exports.TABLE_PREFIX = 'ttt';
 
+exports.targets = Object.freeze([
+	'BatchGetItem',
+	'BatchWriteItem',
+	'CreateTable',
+	'DeleteItem',
+	'DescribeTable',
+	'GetItem',
+	'ListTables',
+	'PutItem',
+	'Query',
+	'Scan'
+]);
+
+exports.tableTargets = Object.freeze([
+	'BatchGetItem',
+	'BatchWriteItem',
+	'DeleteItem',
+	'GetItem',
+	'PutItem',
+	'Query',
+	'Scan'
+]);
+
 exports.debug = function (name) {
 	return debug(`end-to-end:${name}`);
 };
