@@ -9,8 +9,7 @@ const tests = [
 	require('./check-tables').main,
 	require('./missing-dynamodb-table').main,
 	require('./setup-schema').main,
-	require('./attempt-throttled-requests').main,
-	require('./force-operation-errors').main
+	require('./attempt-throttled-requests').main
 ];
 
 const promise = tests.reduce((promise, test) => {

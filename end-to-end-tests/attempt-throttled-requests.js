@@ -130,6 +130,157 @@ tests.push(function testBatchGetItem() {
 	return makeRequest();
 });
 
+tests.push(function testPutItem() {
+	const makeParallelRequests = () => {
+		return Promise.all(range(0, 20).map(() => {
+			const entity = createTestRecord(SCOPE, TYPE);
+
+			const params = {
+				TableName: 'ttt_root_entities',
+				Item: DynamoDB.serializeObject(entity)
+			};
+
+			return client.request('PutItem', params).then(() => {
+				keys.push({_id: entity._id, _scope_type_key: entity._scope_type_key});
+			});
+		}));
+	};
+
+	const requestBatch = () => {
+		debug('PutItem request batch');
+
+		return makeParallelRequests().then(() => {
+			// Make another request, attempt to get a ProvisionedThroughputExceededException.
+			return requestBatch();
+		}, (err) => {
+			debug('PutItem got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
+		});
+	};
+
+	return requestBatch();
+});
+
+tests.push(function testGetItem() {
+	const makeParallelRequests = () => {
+		return Promise.all(range(0, 20).map((i) => {
+			const key = keys[i];
+
+			const params = {
+				TableName: 'ttt_root_entities',
+				Key: {
+					_id: {S: key._id},
+					_scope_type_key: {S: key._scope_type_key}
+				}
+			};
+
+			return client.request('GetItem', params);
+		}));
+	};
+
+	const requestBatch = () => {
+		debug('GetItem request batch');
+
+		return makeParallelRequests().then(() => {
+			// Make another request, attempt to get a ProvisionedThroughputExceededException.
+			return requestBatch();
+		}, (err) => {
+			debug('GetItem got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
+		});
+	};
+
+	return requestBatch();
+});
+
+tests.push(function testQuery() {
+	debug('test Query');
+
+	const makeRequest = () => {
+		debug('Query request');
+
+		const params = {
+			TableName: 'ttt_root_entities',
+			IndexName: 'ttt_entities_by_type',
+			ExpressionAttributeNames: {'#stk': '_scope_type_key'},
+			ExpressionAttributeValues: {':key': {S: `${SCOPE}:${TYPE}`}},
+			KeyConditionExpression: '#stk = :key'
+		};
+
+		return client.request('Query', params).then(() => {
+			return makeRequest();
+		}, (err) => {
+			debug('Query got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
+		});
+	};
+
+	return makeRequest();
+});
+
+tests.push(function testQuery() {
+	debug('test Scan');
+
+	const makeRequest = () => {
+		debug('Scan request');
+
+		const params = {
+			TableName: 'ttt_root_entities'
+		};
+
+		return client.request('Scan', params).then(() => {
+			return makeRequest();
+		}, (err) => {
+			debug('Scan got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
+		});
+	};
+
+	return makeRequest();
+});
+
+tests.push(function testDeleteItem() {
+	const makeParallelRequests = () => {
+		return Promise.all(range(0, 20).map((i) => {
+			const key = keys[i];
+
+			const params = {
+				TableName: 'ttt_root_entities',
+				Key: {
+					_id: {S: key._id},
+					_scope_type_key: {S: key._scope_type_key}
+				}
+			};
+
+			return client.request('DeleteItem', params);
+		}));
+	};
+
+	const requestBatch = () => {
+		debug('DeleteItem request batch');
+
+		return makeParallelRequests().then(() => {
+			// Make another request, attempt to get a ProvisionedThroughputExceededException.
+			return requestBatch();
+		}, (err) => {
+			debug('DeleteItem got ProvisionedThroughputExceededException');
+			assert.isEqual('ProvisionedThroughputExceededException', err.name);
+			assert.isEqual('ProvisionedThroughputExceededException', err.code);
+			return null;
+		});
+	};
+
+	return requestBatch();
+});
+
 exports.main = function main() {
 	return tests.reduce((promise, test) => {
 		return promise.then(() => test());
