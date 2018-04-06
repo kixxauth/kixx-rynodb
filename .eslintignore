@@ -1,6 +1,0 @@
-lib/dynamodb-get-entity.js
-lib/transaction.js
-lib/transaction-create.js
-lib/transaction-update-or-create.js
-lib/scan.js
-lib/transaction-remove.js
