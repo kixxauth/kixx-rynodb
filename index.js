@@ -111,6 +111,30 @@ exports.create = function create(options = {}) {
 			});
 		},
 
+		// args.scope - String
+		// args.type - String
+		// args.cursor - Dynamodb LastEvaluatedKey Object
+		// args.limit - Integer
+		itemsByType(args, options = {}) {
+			const {scope, type, cursor, limit} = args;
+			assert.isNonEmptyString(scope, 'itemsByType() scope');
+			assert.isNonEmptyString(type, 'itemsByType() type');
+
+			const key = Entity.createKey(scope, type)._scope_type_key;
+
+			const params = {key, cursor, limit};
+
+			return dynamodb.scanEntities(params, options).then((res) => {
+				return {
+					items: res.entities.map((entity) => {
+						if (!entity) return null;
+						return Entity.fromDatabaseRecord(entity).toPublicItem();
+					}),
+					cursor: res.cursor
+				};
+			});
+		},
+
 		dynamodb
 	});
 };
