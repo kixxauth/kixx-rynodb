@@ -4,7 +4,8 @@ const EventEmitter = require('events');
 const Transaction = require('./lib/transaction');
 const DynamoDbClient = require('./lib/dynamodb-client');
 const DynamoDb = require('./lib/dynamodb');
-const {isNonEmptyString} = require('kixx/library');
+const Entity = require('./lib/entity');
+const {assert, isNonEmptyString} = require('kixx/library');
 
 exports.Transaction = Transaction;
 
@@ -66,6 +67,27 @@ exports.create = function create(options = {}) {
 		},
 
 		setupSchema() {
+			return dynamodb.setupSchema();
+		},
+
+		batchSetItems(objects, options = {}) {
+			assert.isOk(Array.isArray(objects), 'batchSetItems() objects Array');
+
+			const entities = objects.map((object) => {
+				const {scope, type, id} = object;
+				assert.isNonEmptyString(scope, 'batchSetItems() object.scope');
+				assert.isNonEmptyString(type, 'batchSetItems() object.type');
+				assert.isNonEmptyString(id, 'batchSetItems() object.id');
+				return Entity.fromPublicObject(object);
+			});
+
+			return dynamodb.batchSetEntities(entities, options).then((res) => {
+				return {
+					items: res.entities.map((entity) => {
+						return Entity.fromDatabaseRecord(entity).toPublicItem();
+					})
+				};
+			});
 		},
 
 		dynamodb
