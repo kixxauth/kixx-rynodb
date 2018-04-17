@@ -90,6 +90,27 @@ exports.create = function create(options = {}) {
 			});
 		},
 
+		batchGetItems(objects, options = {}) {
+			assert.isOk(Array.isArray(objects), 'batchGetItems() objects Array');
+
+			const keys = objects.map((object) => {
+				const {scope, type, id} = object;
+				assert.isNonEmptyString(scope, 'batchGetItems() object.scope');
+				assert.isNonEmptyString(type, 'batchGetItems() object.type');
+				assert.isNonEmptyString(id, 'batchGetItems() object.id');
+				return Entity.createKey(scope, type, id);
+			});
+
+			return dynamodb.batchGetEntities(keys, options).then((res) => {
+				return {
+					items: res.entities.map((entity) => {
+						if (!entity) return null;
+						return Entity.fromDatabaseRecord(entity).toPublicItem();
+					})
+				};
+			});
+		},
+
 		dynamodb
 	});
 };
