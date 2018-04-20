@@ -1,6 +1,6 @@
 {
   "name": "kixx-rynodb",
-  "version": "2.0.0",
+  "version": "2.0.0-pre.1",
   "description": "A Redis enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
@@ -21,15 +21,15 @@
     "kixx-assert": "1.0.5"
   },
   "peerDependencies": {
-    "bluebird": "^3.0.0",
-    "kixx": ">=0.19.1",
+    "bluebird": ">=3.5.1",
+    "kixx": ">=0.100.0-pre.2",
     "ramda": ">=0.25.0"
   },
   "devDependencies": {
-    "bluebird": "^3.0.0",
+    "bluebird": ">=3.5.1",
     "debug": "3.1.0",
     "eslint": "4.19.1",
-    "kixx": ">=0.19.2",
+    "kixx": ">=0.100.0-pre.2",
     "ramda": ">=0.25.0"
   }
 }
