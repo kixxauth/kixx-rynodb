@@ -18,18 +18,16 @@
   },
   "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
   "dependencies": {
-    "kixx-assert": "1.0.5"
   },
   "peerDependencies": {
-    "bluebird": ">=3.5.1",
-    "kixx": ">=0.100.0-pre.2",
-    "ramda": ">=0.25.0"
+    "bluebird": "^3.0.0",
+    "kixx": "^1.0.0",
+    "ramda": "^0.25.0"
   },
   "devDependencies": {
-    "bluebird": ">=3.5.1",
+    "bluebird": "^3.0.0",
     "debug": "3.1.0",
-    "eslint": "4.19.1",
-    "kixx": ">=0.100.0-pre.2",
-    "ramda": ">=0.25.0"
+    "kixx": "^1.0.0",
+    "ramda": "^0.25.0"
   }
 }
