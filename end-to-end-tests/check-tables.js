@@ -2,7 +2,7 @@
 
 const Promise = require('bluebird');
 const EventEmitter = require('events');
-const DynamoDB = require('../lib/dynamodb');
+const DynamoDbClient = require('../lib/dynamodb-client');
 const tools = require('./tools');
 
 const debug = tools.debug('check-tables');
@@ -13,17 +13,17 @@ const tests = [];
 
 const emitter = new EventEmitter();
 
-const dynamodb = DynamoDB.create({
+const client = DynamoDbClient.create({
 	emitter,
-	tablePrefix: tools.TABLE_PREFIX,
 	awsRegion,
 	awsAccessKey,
 	awsSecretKey
 });
 
 tests.push(function listTables() {
-	debug(`listTables()`);
-	return dynamodb.listTables().then(({tables}) => {
+	debug(`ListTables`);
+	return client.request('ListTables').then(({TableNames}) => {
+		const tables = TableNames;
 		const testTables = tables.filter((table) => {
 			return table.startsWith(tools.TABLE_PREFIX);
 		});

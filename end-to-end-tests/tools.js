@@ -1,7 +1,6 @@
 /* eslint-disable no-process-env */
 'use strict';
 
-const {uuidV1} = require('kixx');
 const {isNonEmptyString} = require('kixx/library');
 const debug = require('debug');
 
@@ -29,6 +28,14 @@ exports.tableTargets = Object.freeze([
 	'Query',
 	'Scan'
 ]);
+
+const uid = (function () {
+	let n = 0;
+	return function uid() {
+		n += 1;
+		return `some-uuid-thingy-123-xx${n}`;
+	};
+}());
 
 exports.debug = function (name) {
 	return debug(`kixx-rynodb:end-to-end:${name}`);
@@ -58,7 +65,7 @@ exports.getAwsCredentials = () => {
 
 exports.createTestRecord = function createTestRecord(scope, type, _) {
 	return {
-		_id: uuidV1(),
+		_id: uid(),
 		_scope_type_key: `${scope}:${type}`,
 		_updated: new Date().toISOString(),
 		undefinedValue: _,
