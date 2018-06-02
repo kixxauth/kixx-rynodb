@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use strict';
 
 const Promise = require('bluebird');
@@ -17,6 +16,7 @@ const promise = tests.reduce((promise, test) => {
 	return promise.then(() => test());
 }, Promise.resolve(null));
 
+/* eslint-disable no-console */
 promise.then(() => {
 	console.log('Done :-)');
 	return null;
@@ -25,3 +25,4 @@ promise.then(() => {
 	console.error(err.stack);
 	return null;
 });
+/* eslint-enable */

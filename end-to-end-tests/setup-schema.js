@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use strict';
 
 const Promise = require('bluebird');
@@ -9,10 +8,6 @@ const tools = require('./tools');
 const debug = tools.debug('setup-schema');
 
 const {awsAccessKey, awsSecretKey, awsRegion} = tools.getAwsCredentials();
-
-debug(`AWS region: ${awsRegion}`);
-debug(`AWS access key id: ${awsAccessKey}`);
-debug(`AWS secret key: ${awsSecretKey}`);
 
 const tests = [];
 
@@ -41,6 +36,7 @@ exports.main = function main() {
 	}, Promise.resolve(null));
 };
 
+/* eslint-disable no-console */
 if (require.main === module) {
 	exports.main().then(() => {
 		console.log('Done :-)');
@@ -50,3 +46,4 @@ if (require.main === module) {
 		console.error(err.stack);
 	});
 }
+/* eslint-enable */

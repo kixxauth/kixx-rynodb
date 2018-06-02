@@ -31,7 +31,7 @@ exports.tableTargets = Object.freeze([
 ]);
 
 exports.debug = function (name) {
-	return debug(`end-to-end:${name}`);
+	return debug(`kixx-rynodb:end-to-end:${name}`);
 };
 
 exports.getAwsCredentials = () => {

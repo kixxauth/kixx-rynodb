@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use strict';
 
 const Promise = require('bluebird');
@@ -9,10 +8,6 @@ const tools = require('./tools');
 const debug = tools.debug('check-tables');
 
 const {awsAccessKey, awsSecretKey, awsRegion} = tools.getAwsCredentials();
-
-debug(`AWS region: ${awsRegion}`);
-debug(`AWS access key id: ${awsAccessKey}`);
-debug(`AWS secret key: ${awsSecretKey}`);
 
 const tests = [];
 
@@ -35,7 +30,7 @@ tests.push(function listTables() {
 
 		if (testTables.length > 0) {
 			testTables.forEach((table) => {
-				console.log(`The test table "${table}" is still present.`);
+				debug(`The test table "${table}" is still present.`);
 			});
 			throw new Error(`Test tables must be deleted before continuing tests.`);
 		}
@@ -50,6 +45,7 @@ exports.main = function main() {
 	}, Promise.resolve(null));
 };
 
+/* eslint-disable no-console */
 if (require.main === module) {
 	exports.main().then(() => {
 		console.log('Done :-)');
@@ -59,3 +55,4 @@ if (require.main === module) {
 		console.error(err.stack);
 	});
 }
+/* eslint-enable */
