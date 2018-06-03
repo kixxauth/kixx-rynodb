@@ -17,8 +17,7 @@
     "url": "https://github.com/kixxauth/kixx-rynodb/issues"
   },
   "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
-  "dependencies": {
-  },
+  "dependencies": {},
   "peerDependencies": {
     "bluebird": "^3.0.0",
     "kixx": "^1.0.0",
