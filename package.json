@@ -4,7 +4,7 @@
   "description": "An enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
-    "test": "eslint ./",
+    "test": "eslint ./ && kixx-test-node",
     "lint": "eslint ./"
   },
   "author": "Kris Walker (www.kixx.name)",
@@ -27,6 +27,7 @@
     "bluebird": "^3.0.0",
     "debug": "3.1.0",
     "kixx": "^1.0.0",
+    "kixx-test-node": "1.2.5",
     "ramda": "^0.25.0"
   }
 }
