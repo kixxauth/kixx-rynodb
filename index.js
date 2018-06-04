@@ -7,6 +7,8 @@ const DynamoDb = require('./lib/dynamodb');
 const Entity = require('./lib/entity');
 const {assert, isNonEmptyString} = require('kixx/library');
 
+exports.DynamoDbClient = DynamoDbClient;
+exports.DynamoDb = DynamoDb;
 exports.Transaction = Transaction;
 
 // options.tablePrefix
@@ -113,7 +115,7 @@ exports.create = function create(options = {}) {
 
 		// args.scope - String
 		// args.type - String
-		// args.cursor - Dynamodb LastEvaluatedKey Object
+		// args.cursor - DynamoDB LastEvaluatedKey Object
 		// args.limit - Integer
 		itemsByType(args, options = {}) {
 			const {scope, type, cursor, limit} = args;
