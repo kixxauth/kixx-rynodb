@@ -12,6 +12,8 @@ module.exports = function (t) {
 		let client;
 		let requestContext;
 
+		const warningListener = sinon.spy();
+
 		const response = Object.freeze({RESPONSE: true});
 
 		const target = 'SomeTarget';
@@ -22,6 +24,7 @@ module.exports = function (t) {
 
 		t.before(function (done) {
 			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
 			client = DynamoDbClient.create({emitter});
 
 			sinon.stub(client, '_request').callsFake(function () {
@@ -29,10 +32,12 @@ module.exports = function (t) {
 				return Promise.resolve(response);
 			});
 
-			return client.requestWithBackoff(target, params, options).then((res) => {
-				result = res;
-				return done();
-			});
+			return client.requestWithBackoff(target, params, options)
+				.then(function (res) {
+					result = res;
+					return done();
+				})
+				.catch(done);
 		});
 
 		t.it('calls _request() only once', () => {
@@ -55,6 +60,95 @@ module.exports = function (t) {
 
 		t.it('returns the response', () => {
 			assert.isEqual(response, result);
+		});
+
+		t.it('does not emit a warning', () => {
+			assert.isEqual(0, warningListener.callCount);
+		});
+	});
+
+	t.describe('with unexpected error', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const error = new Error('Rejected Error');
+
+		const target = 'SomeTarget';
+		const params = {};
+		const options = {};
+
+		let result;
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request').returns(Promise.reject(error));
+
+			return client.requestWithBackoff(target, params, options)
+				.then(function (res) {
+					throw new Error('Should not call success callback');
+				})
+				.catch(function (err) {
+					result = err;
+					return done();
+				});
+		});
+
+		t.it('rejects with the error', () => {
+			assert.isEqual(error, result);
+		});
+
+		t.it('does not emit a warning', () => {
+			assert.isEqual(0, warningListener.callCount);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const error = new Error('Throughput Error');
+		error.code = 'ProvisionedThroughputExceededException';
+
+		const response = Object.freeze({RESPONSE: true});
+
+		const target = 'SomeTarget';
+		const params = {TableName: 'SomeTable'};
+		const options = {};
+
+		let result;
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).returns(Promise.reject(error))
+				.onCall(1).returns(Promise.resolve(response));
+
+			return client.requestWithBackoff(target, params, options)
+				.then(function (res) {
+					result = res;
+					return done();
+				})
+				.catch(done);
+		});
+
+		t.it('returns the response', () => {
+			assert.isEqual(response, result);
+		});
+
+		t.it('emits a warning', () => {
+			assert.isEqual(1, warningListener.callCount);
+			const [err] = warningListener.args[0];
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', err.message);
 		});
 	});
 };
