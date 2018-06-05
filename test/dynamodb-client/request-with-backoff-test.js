@@ -122,6 +122,13 @@ module.exports = function (t) {
 		const params = {TableName: 'SomeTable'};
 		const options = {};
 
+		const start = Date.now();
+		let delay1 = 0;
+		let delay2 = 0;
+		let delay3 = 0;
+		let delay4 = 0;
+		let delay5 = 0;
+
 		let result;
 
 		t.before(function (done) {
@@ -130,8 +137,27 @@ module.exports = function (t) {
 			client = DynamoDbClient.create({emitter});
 
 			sinon.stub(client, '_request')
-				.onCall(0).returns(Promise.reject(error))
-				.onCall(1).returns(Promise.resolve(response));
+				.onCall(0).callsFake(() => {
+					delay1 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(1).callsFake(() => {
+					delay2 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(2).callsFake(() => {
+					delay3 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(3).callsFake(() => {
+					delay4 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(4).callsFake(() => {
+					delay5 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(5).returns(Promise.resolve(response));
 
 			return client.requestWithBackoff(target, params, options)
 				.then(function (res) {
@@ -145,7 +171,110 @@ module.exports = function (t) {
 			assert.isEqual(response, result);
 		});
 
-		t.it('emits a warning', () => {
+		t.it('emits 1 warning', () => {
+			assert.isEqual(1, warningListener.callCount);
+			const [err] = warningListener.args[0];
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', err.message);
+		});
+
+		t.it('uses backoff delays', () => {
+			assert.isLessThan(50, delay1);
+			assert.isLessThan(150, delay2);
+			assert.isLessThan(350, delay3);
+			assert.isLessThan(750, delay4);
+			assert.isLessThan(1550, delay5);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException => operation timeout', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		let error;
+
+		const target = 'SomeTarget';
+		const params = {TableName: 'SomeTable'};
+		const options = {operationTimeout: 1};
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).returns(Promise.reject(throughputError))
+				.onCall(1).returns(Promise.resolve({}));
+
+			return client.requestWithBackoff(target, params, options)
+				.then(function () {
+					throw new Error('Should not resolve');
+				})
+				.catch(function (err) {
+					error = err;
+					return done();
+				});
+		});
+
+		t.it('rejects with an OPERATION_TIMEOUT Error', () => {
+			assert.isDefined(error, 'is defined');
+			assert.isEqual('Error', error.name);
+			assert.isEqual('OPERATION_TIMEOUT', error.code);
+			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', error.message);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException => operation timeout = 4s', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		const response = Object.freeze({RESPONSE: true});
+
+		let result;
+		const start = Date.now();
+		let duration = 0;
+
+		const target = 'SomeTarget';
+		const params = {TableName: 'SomeTable'};
+		const options = {operationTimeout: 4000};
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).callsFake(() => Promise.reject(throughputError))
+				.onCall(1).callsFake(() => Promise.reject(throughputError))
+				.onCall(2).returns(Promise.resolve(response));
+
+			return client.requestWithBackoff(target, params, options)
+				.then(function (res) {
+					result = res;
+					duration = Date.now() - start;
+					return done();
+				})
+				.catch(done);
+		});
+
+		t.it('has a backoff delay', () => {
+			assert.isGreaterThan(500, duration);
+		});
+
+		t.it('returns the response', () => {
+			assert.isEqual(response, result);
+		});
+
+		t.it('emits 1 warning', () => {
 			assert.isEqual(1, warningListener.callCount);
 			const [err] = warningListener.args[0];
 			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', err.message);
