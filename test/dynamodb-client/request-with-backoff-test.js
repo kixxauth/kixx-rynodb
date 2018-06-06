@@ -122,7 +122,6 @@ module.exports = function (t) {
 		const params = {TableName: 'SomeTable'};
 		const options = {};
 
-		const start = Date.now();
 		let delay1 = 0;
 		let delay2 = 0;
 		let delay3 = 0;
@@ -132,32 +131,36 @@ module.exports = function (t) {
 		let result;
 
 		t.before(function (done) {
+			const start = Date.now();
+
 			emitter = new EventEmitter();
 			emitter.on('warning', warningListener);
 			client = DynamoDbClient.create({emitter});
 
 			sinon.stub(client, '_request')
 				.onCall(0).callsFake(() => {
-					delay1 = Date.now() - start;
 					return Promise.reject(error);
 				})
 				.onCall(1).callsFake(() => {
-					delay2 = Date.now() - start;
+					delay1 = Date.now() - start;
 					return Promise.reject(error);
 				})
 				.onCall(2).callsFake(() => {
-					delay3 = Date.now() - start;
+					delay2 = Date.now() - start;
 					return Promise.reject(error);
 				})
 				.onCall(3).callsFake(() => {
-					delay4 = Date.now() - start;
+					delay3 = Date.now() - start;
 					return Promise.reject(error);
 				})
 				.onCall(4).callsFake(() => {
-					delay5 = Date.now() - start;
+					delay4 = Date.now() - start;
 					return Promise.reject(error);
 				})
-				.onCall(5).returns(Promise.resolve(response));
+				.onCall(5).callsFake(() => {
+					delay5 = Date.now() - start;
+					return Promise.resolve(response);
+				});
 
 			return client.requestWithBackoff(target, params, options)
 				.then(function (res) {
@@ -178,11 +181,20 @@ module.exports = function (t) {
 		});
 
 		t.it('uses backoff delays', () => {
-			assert.isLessThan(50, delay1);
-			assert.isLessThan(150, delay2);
-			assert.isLessThan(350, delay3);
-			assert.isLessThan(750, delay4);
-			assert.isLessThan(1550, delay5);
+			assert.isGreaterThan(100, delay1);
+			assert.isLessThan(150, delay1);
+
+			assert.isGreaterThan(100 + 200, delay2);
+			assert.isLessThan(350, delay2);
+
+			assert.isGreaterThan(100 + 200 + 400, delay3);
+			assert.isLessThan(750, delay3);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800, delay4);
+			assert.isLessThan(1550, delay4);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800 + 1600, delay5);
+			assert.isLessThan(3150, delay5);
 		});
 	});
 
@@ -278,6 +290,96 @@ module.exports = function (t) {
 			assert.isEqual(1, warningListener.callCount);
 			const [err] = warningListener.args[0];
 			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', err.message);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException => operation timeout fail', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const error = new Error('Throughput Error');
+		error.code = 'ProvisionedThroughputExceededException';
+
+		const target = 'SomeTarget';
+		const params = {TableName: 'SomeTable'};
+		const options = {operationTimeout: 3000};
+
+		let delay1 = 0;
+		let delay2 = 0;
+		let delay3 = 0;
+		let delay4 = 0;
+
+		let resultError;
+
+		t.before(function (done) {
+			const start = Date.now();
+
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).callsFake(() => {
+					return Promise.reject(error);
+				})
+				.onCall(1).callsFake(() => {
+					delay1 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(2).callsFake(() => {
+					delay2 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(3).callsFake(() => {
+					delay3 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(4).callsFake(() => {
+					delay4 = Date.now() - start;
+					return Promise.reject(error);
+				});
+
+			return client.requestWithBackoff(target, params, options)
+				.then(function (res) {
+					throw new Error('Should not resolve');
+				})
+				.catch(function (err) {
+					resultError = err;
+					return done();
+				});
+		});
+
+		t.it('calls _request() 5 times', () => {
+			assert.isEqual(5, client._request.callCount);
+		});
+
+		t.it('rejects with an OPERATION_TIMEOUT Error', () => {
+			assert.isDefined(resultError, 'is defined');
+			assert.isEqual('Error', resultError.name);
+			assert.isEqual('OPERATION_TIMEOUT', resultError.code);
+			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', resultError.message);
+		});
+
+		t.it('emits 1 warning', () => {
+			assert.isEqual(1, warningListener.callCount);
+			const [err] = warningListener.args[0];
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', err.message);
+		});
+
+		t.it('uses backoff delays', () => {
+			assert.isGreaterThan(100, delay1);
+			assert.isLessThan(150, delay1);
+
+			assert.isGreaterThan(100 + 200, delay2);
+			assert.isLessThan(350, delay2);
+
+			assert.isGreaterThan(100 + 200 + 400, delay3);
+			assert.isLessThan(750, delay3);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800, delay4);
+			assert.isLessThan(1550, delay4);
 		});
 	});
 };
