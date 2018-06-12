@@ -89,7 +89,7 @@ module.exports = function (t) {
 
 			sinon.stub(client, '_request').returns(Promise.reject(error));
 
-			return client.requestWithBackoff(target, params, options)
+			return client.batchWriteWithBackoff(target, params, options)
 				.then(function (res) {
 					throw new Error('Should not call success callback');
 				})
@@ -105,6 +105,98 @@ module.exports = function (t) {
 
 		t.it('does not emit a warning', () => {
 			assert.isEqual(0, warningListener.callCount);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException and UnprocessedItems', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const error = new Error('Throughput Error');
+		error.code = 'ProvisionedThroughputExceededException';
+
+		const response = Object.freeze({UnprocessedItems: {}});
+
+		const target = 'SomeTarget';
+		const params = Object.freeze({RequestItems: {SomeTable: 1}});
+		const options = {};
+
+		let delay1 = 0;
+		let delay2 = 0;
+		let delay3 = 0;
+		let delay4 = 0;
+		let delay5 = 0;
+
+		let result;
+
+		t.before(function (done) {
+			const start = Date.now();
+
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).callsFake(() => {
+					return Promise.reject(error);
+				})
+				.onCall(1).callsFake(() => {
+					delay1 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				})
+				.onCall(2).callsFake(() => {
+					delay2 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				})
+				.onCall(3).callsFake(() => {
+					delay3 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				})
+				.onCall(4).callsFake(() => {
+					delay4 = Date.now() - start;
+					return Promise.reject(error);
+				})
+				.onCall(5).callsFake(() => {
+					delay5 = Date.now() - start;
+					return Promise.resolve(response);
+				});
+
+			return client.batchWriteWithBackoff(target, params, options)
+				.then(function (res) {
+					result = res;
+					return done();
+				})
+				.catch(done);
+		});
+
+		t.it('returns the response', () => {
+			assert.isEqual(response, result);
+		});
+
+		t.it('emits 2 warnings', () => {
+			assert.isEqual(2, warningListener.callCount);
+			const [args1, args2] = warningListener.args;
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', args1[0].message);
+			assert.isEqual('DynamoDB UnprocessedItems during SomeTarget on table SomeTable', args2[0].message);
+		});
+
+		t.it('uses backoff delays', () => {
+			assert.isGreaterThan(100, delay1);
+			assert.isLessThan(150, delay1);
+
+			assert.isGreaterThan(100 + 200, delay2);
+			assert.isLessThan(350, delay2);
+
+			assert.isGreaterThan(100 + 200 + 400, delay3);
+			assert.isLessThan(750, delay3);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800, delay4);
+			assert.isLessThan(1550, delay4);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800 + 1600, delay5);
+			assert.isLessThan(3150, delay5);
 		});
 	});
 };
