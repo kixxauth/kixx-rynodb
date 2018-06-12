@@ -252,7 +252,6 @@ module.exports = function (t) {
 		const response = Object.freeze({RESPONSE: true});
 
 		let result;
-		const start = Date.now();
 		let duration = 0;
 
 		const target = 'SomeTarget';
@@ -260,6 +259,8 @@ module.exports = function (t) {
 		const options = {operationTimeout: 4000};
 
 		t.before(function (done) {
+			const start = Date.now();
+
 			emitter = new EventEmitter();
 			emitter.on('warning', warningListener);
 			client = DynamoDbClient.create({emitter});
@@ -279,7 +280,8 @@ module.exports = function (t) {
 		});
 
 		t.it('has a backoff delay', () => {
-			assert.isGreaterThan(500, duration);
+			assert.isGreaterThan(100 + 200, duration);
+			assert.isLessThan(350, duration);
 		});
 
 		t.it('returns the response', () => {
@@ -321,9 +323,7 @@ module.exports = function (t) {
 			client = DynamoDbClient.create({emitter});
 
 			sinon.stub(client, '_request')
-				.onCall(0).callsFake(() => {
-					return Promise.reject(error);
-				})
+				.onCall(0).returns(Promise.reject(error))
 				.onCall(1).callsFake(() => {
 					delay1 = Date.now() - start;
 					return Promise.reject(error);

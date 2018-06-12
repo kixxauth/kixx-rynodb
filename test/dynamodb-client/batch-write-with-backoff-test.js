@@ -285,4 +285,151 @@ module.exports = function (t) {
 			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', error.message);
 		});
 	});
+
+	t.describe('with ProvisionedThroughputExceededException and UnprocessedItems => operation timeout = 4s', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		const response = Object.freeze({UnprocessedItems: {}});
+
+		let result;
+		let duration = 0;
+
+		const target = 'SomeTarget';
+		const params = Object.freeze({RequestItems: {SomeTable: 1}});
+		const options = {operationTimeout: 4000};
+
+		t.before(function (done) {
+			const start = Date.now();
+
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).callsFake(() => Promise.reject(throughputError))
+				.onCall(1).returns(Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}})))
+				.onCall(2).returns(Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}})))
+				.onCall(3).callsFake(() => Promise.reject(throughputError))
+				.onCall(4).returns(Promise.resolve(response));
+
+			return client.batchWriteWithBackoff(target, params, options)
+				.then(function (res) {
+					result = res;
+					duration = Date.now() - start;
+					return done();
+				})
+				.catch(done);
+		});
+
+		t.it('has a backoff delay', () => {
+			assert.isGreaterThan(100 + 200 + 400 + 800, duration);
+			assert.isLessThan(1550, duration);
+		});
+
+		t.it('returns the response', () => {
+			assert.isEqual(response, result);
+		});
+
+		t.it('emits 2 warnings', () => {
+			assert.isEqual(2, warningListener.callCount);
+			const [args1, args2] = warningListener.args;
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', args1[0].message);
+			assert.isEqual('DynamoDB UnprocessedItems during SomeTarget on table SomeTable', args2[0].message);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException and UnprocessedItems => operation timeout fail', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		const target = 'SomeTarget';
+		const params = Object.freeze({RequestItems: {SomeTable: 1}});
+		const options = {operationTimeout: 3000};
+
+		let delay1 = 0;
+		let delay2 = 0;
+		let delay3 = 0;
+		let delay4 = 0;
+
+		let resultError;
+
+		t.before(function (done) {
+			const start = Date.now();
+
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).returns(Promise.reject(throughputError))
+				.onCall(1).callsFake(() => {
+					delay1 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				})
+				.onCall(2).callsFake(() => {
+					delay2 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				})
+				.onCall(3).callsFake(() => {
+					delay3 = Date.now() - start;
+					return Promise.reject(throughputError);
+				})
+				.onCall(4).callsFake(() => {
+					delay4 = Date.now() - start;
+					return Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}}));
+				});
+
+			return client.batchWriteWithBackoff(target, params, options)
+				.then(function (res) {
+					throw new Error('Should not resolve');
+				})
+				.catch(function (err) {
+					resultError = err;
+					return done();
+				});
+		});
+
+		t.it('calls _request() 5 times', () => {
+			assert.isEqual(5, client._request.callCount);
+		});
+
+		t.it('rejects with an OPERATION_TIMEOUT Error', () => {
+			assert.isDefined(resultError, 'is defined');
+			assert.isEqual('Error', resultError.name);
+			assert.isEqual('OPERATION_TIMEOUT', resultError.code);
+			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', resultError.message);
+		});
+
+		t.it('emits 2 warnings', () => {
+			assert.isEqual(2, warningListener.callCount);
+			const [args1, args2] = warningListener.args;
+			assert.isEqual('DynamoDB ProvisionedThroughputExceededException during SomeTarget on table SomeTable', args1[0].message);
+			assert.isEqual('DynamoDB UnprocessedItems during SomeTarget on table SomeTable', args2[0].message);
+		});
+
+		t.it('uses backoff delays', () => {
+			assert.isGreaterThan(100, delay1);
+			assert.isLessThan(150, delay1);
+
+			assert.isGreaterThan(100 + 200, delay2);
+			assert.isLessThan(350, delay2);
+
+			assert.isGreaterThan(100 + 200 + 400, delay3);
+			assert.isLessThan(750, delay3);
+
+			assert.isGreaterThan(100 + 200 + 400 + 800, delay4);
+			assert.isLessThan(1550, delay4);
+		});
+	});
 };
