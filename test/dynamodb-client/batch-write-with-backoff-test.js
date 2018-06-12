@@ -199,4 +199,90 @@ module.exports = function (t) {
 			assert.isLessThan(3150, delay5);
 		});
 	});
+
+	t.describe('with UnprocessedItems => operation timeout', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		let error;
+
+		const target = 'SomeTarget';
+		const params = Object.freeze({RequestItems: {SomeTable: 1}});
+		const options = {operationTimeout: 1};
+
+		const response = Object.freeze({UnprocessedItems: {}});
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).returns(Promise.resolve(Object.freeze({UnprocessedItems: {SomeTable: 1}})))
+				.onCall(1).returns(Promise.resolve(response));
+
+			return client.batchWriteWithBackoff(target, params, options)
+				.then(function () {
+					throw new Error('Should not resolve');
+				})
+				.catch(function (err) {
+					error = err;
+					return done();
+				});
+		});
+
+		t.it('rejects with an OPERATION_TIMEOUT Error', () => {
+			assert.isDefined(error, 'is defined');
+			assert.isEqual('Error', error.name);
+			assert.isEqual('OPERATION_TIMEOUT', error.code);
+			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', error.message);
+		});
+	});
+
+	t.describe('with ProvisionedThroughputExceededException => operation timeout', (t) => {
+		let emitter;
+		let client;
+
+		const warningListener = sinon.spy();
+
+		const throughputError = new Error('Throughput Error');
+		throughputError.code = 'ProvisionedThroughputExceededException';
+
+		let error;
+
+		const target = 'SomeTarget';
+		const params = Object.freeze({RequestItems: {SomeTable: 1}});
+		const options = {operationTimeout: 1};
+
+		t.before(function (done) {
+			emitter = new EventEmitter();
+			emitter.on('warning', warningListener);
+			client = DynamoDbClient.create({emitter});
+
+			sinon.stub(client, '_request')
+				.onCall(0).returns(Promise.reject(throughputError))
+				.onCall(1).returns(Promise.resolve({}));
+
+			return client.batchWriteWithBackoff(target, params, options)
+				.then(function () {
+					throw new Error('Should not resolve');
+				})
+				.catch(function (err) {
+					error = err;
+					return done();
+				});
+		});
+
+		t.it('rejects with an OPERATION_TIMEOUT Error', () => {
+			assert.isDefined(error, 'is defined');
+			assert.isEqual('Error', error.name);
+			assert.isEqual('OPERATION_TIMEOUT', error.code);
+			assert.isEqual('DynamoDB client operation timeout error during SomeTarget due to throttling on table SomeTable', error.message);
+		});
+	});
 };
