@@ -93,7 +93,7 @@ __Index name:__ PREFIX_index_lookup
 Key           | Name                | Value
 ------------- | ------------------- | -----
 Partition key | `_scope_index_name` | Compound SCOPE:INDEX_NAME String
-Sort key      | `_index_key`     | The index value created by the map function.
+Sort key      | `_index_key`        | The index value created by the map function.
 
 ### Schema Use Cases
 
