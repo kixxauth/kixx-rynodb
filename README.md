@@ -3,7 +3,7 @@ Kixx RynoDB
 An enhanced Dynamodb store for [Kixx](https://github.com/kixxauth/kixx) applications.
 
 ## End to End Tests
-The end to end tests are designed to test features and functionality of the DynamoDB client and an actualy AWS DynamoDB endpoint. Each test in the `end-to-end-tests/` folder can be run independently by running:
+The end to end tests are designed to test features and functionality of the DynamoDB client and an actual AWS DynamoDB endpoint. Each test in the `end-to-end-tests/` folder can be run independently by running:
 
 `node end-to-end-tests/[TEST_FILE].js`
 
@@ -17,6 +17,12 @@ The expected AWS credentials will need to be set:
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_REGION=pick-a-region
+```
+
+And, you'll want to set a useful DEBUG setting, otherwise there will be no console output:
+
+```
+export DEBUG='kixx-rynodb:*'
 ```
 
 __!GOTCHA:__ A full set of tables will be set up by the setup-schema test using the table prefix "ttt". These tables will need to be removed before the next full test run.
