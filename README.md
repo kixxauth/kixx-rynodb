@@ -62,44 +62,6 @@ Key           | Name              | Value
 Partition key | `_scope_type_key` | Compound SCOPE:TYPE String
 Sort key      | `_updated`        | The subject updated ISO Date String
 
-### Relationships Table
-Holds all relationship entries as a subject -> predicate -> object tuple.
-
-__Name:__ PREFIX_relationship_entries
-
-__Record__
-
-```JS
-{
-    _subject_scope: STRING,
-    _subject_type: STRING,
-    _subject_id: STRING,
-    _predicate: STRING,
-    _index: INTEGER,
-    _object_scope: STRING,
-    _object_type: STRING,
-    _object_id: STRING,
-    _subject_key: `${subject.scope}:${subject.type}:${subject.id}`,
-    _object_key: `${object_scope}:${object_type}:${object_id}`,
-    _predicate_key: `${predicate}:${index}:${object_type}:${object_id}`,
-    ...objectAttributes
-}
-```
-
-Key                   | Name             | Value
---------------------- | ---------------- | -----
-Primary partition key | `_subject_key`   | Compound SCOPE:TYPE:ID String
-Primary sort key      | `_predicate_key` | Compound PREDICATE:OBJECT:INDEX String
-
-*The compound PREDICATE:OBJECT:INDEX sort key allows us to store a object ID multiple times on the same subject->predicate*
-
-__Index name:__ PREFIX_reverse_relationships
-
-Key           | Name          | Value
-------------- | ------------- | -----
-Partition key | `_object_key` | Compound SCOPE:TYPE:ID String
-Sort key      | `_index`      | The object relationship index Integer
-
 ### Index Lookup Table
 Holds all index entries emittied from mapping functions.
 
