@@ -14,6 +14,7 @@ exports.DynamoDbClient = DynamoDbClient;
 exports.DynamoDb = DynamoDb;
 exports.Transaction = Transaction;
 
+// options.indexes
 // options.tablePrefix
 // options.awsRegion
 // options.awsAccessKey
@@ -39,6 +40,7 @@ exports.create = function create(options = {}) {
 	}
 
 	const {
+		indexes,
 		tablePrefix,
 		awsRegion,
 		awsAccessKey,
@@ -48,6 +50,13 @@ exports.create = function create(options = {}) {
 		backoffMultiplier,
 		requestTimeout
 	} = options;
+
+	Object.keys(indexes || {}).forEach((type) => {
+		const indexNames = Object.keys(indexes[type]);
+		for (let i = 0; i < indexNames.length; i++) {
+			assert.equal('function', typeof indexes[type][indexNames[i]], 'index mapper is not a Function');
+		}
+	});
 
 	const client = new DynamoDbClient({
 		emitter,
@@ -68,7 +77,7 @@ exports.create = function create(options = {}) {
 
 	return Object.assign(emitter, {
 		createTransaction() {
-			return new Transaction({dynamodb});
+			return new Transaction({dynamodb, indexes});
 		},
 
 		setupSchema() {
