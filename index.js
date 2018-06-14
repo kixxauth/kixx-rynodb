@@ -1,10 +1,13 @@
 'use strict';
 
+const Promise = require('bluebird');
 const EventEmitter = require('events');
+const {StackedError} = require('kixx');
 const Transaction = require('./lib/transaction');
 const DynamoDbClient = require('./lib/dynamodb-client');
 const DynamoDb = require('./lib/dynamodb');
 const Entity = require('./lib/entity');
+const IndexEntry = require('./lib/index-entry');
 const {assert, isNonEmptyString} = require('kixx/library');
 
 exports.DynamoDbClient = DynamoDbClient;
@@ -126,15 +129,47 @@ exports.create = function create(options = {}) {
 
 			const params = {key, cursor, limit};
 
-			return dynamodb.scanEntities(params, options).then((res) => {
-				return {
-					items: res.entities.map((entity) => {
-						if (!entity) return null;
-						return Entity.fromDatabaseRecord(entity).toPublicItem();
-					}),
-					cursor: res.cursor
-				};
-			});
+			return dynamodb.scanEntities(params, options)
+				.then((res) => {
+					return {
+						items: res.entities.map((entity) => {
+							if (!entity) return null;
+							return Entity.fromDatabaseRecord(entity).toPublicItem();
+						}),
+						cursor: res.cursor
+					};
+				})
+				.catch((err) => {
+					return Promise.reject(new StackedError(
+						`Error during itemsByType()`,
+						err
+					));
+				});
+		},
+
+		query(args, options = {}) {
+			const {scope, index, value, operator, cursor, limit} = args;
+
+			const key = IndexEntry.queryKey(scope, index, value);
+
+			const params = {key, operator, cursor, limit};
+
+			return dynamodb.queryIndex(params)
+				.then((res) => {
+					return {
+						items: res.entities.map((entity) => {
+							if (!entity) return null;
+							return Entity.fromDatabaseRecord(entity).toPublicItem();
+						}),
+						cursor: res.cursor
+					};
+				})
+				.catch((err) => {
+					return Promise.reject(new StackedError(
+						`Error during query()`,
+						err
+					));
+				});
 		},
 
 		dynamodb
