@@ -54,7 +54,7 @@ exports.create = function create(options = {}) {
 	Object.keys(indexes || {}).forEach((type) => {
 		const indexNames = Object.keys(indexes[type]);
 		for (let i = 0; i < indexNames.length; i++) {
-			assert.equal('function', typeof indexes[type][indexNames[i]], 'index mapper is not a Function');
+			assert.isEqual('function', typeof indexes[type][indexNames[i]], 'index mapper is not a Function');
 		}
 	});
 
@@ -156,6 +156,12 @@ exports.create = function create(options = {}) {
 				});
 		},
 
+		// args.scope - String
+		// args.index - String
+		// args.operator - String "equals" or "begins_with"
+		// args.value - String or Number
+		// args.cursor - DynamoDB LastEvaluatedKey Object
+		// args.limit - Integer
 		query(args, options = {}) {
 			const {scope, index, value, operator, cursor, limit} = args;
 
