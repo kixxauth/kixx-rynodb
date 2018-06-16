@@ -8,7 +8,7 @@ const DynamoDbClient = require('./lib/dynamodb-client');
 const DynamoDb = require('./lib/dynamodb');
 const Entity = require('./lib/entity');
 const IndexEntry = require('./lib/index-entry');
-const {assert, isNonEmptyString} = require('kixx/library');
+const {assert, isNonEmptyString, isNumber, isObject, isUndefined} = require('kixx/library');
 
 exports.DynamoDbClient = DynamoDbClient;
 exports.DynamoDb = DynamoDb;
@@ -164,6 +164,25 @@ exports.create = function create(options = {}) {
 		// args.limit - Integer
 		query(args, options = {}) {
 			const {scope, index, value, operator, cursor, limit} = args;
+
+			assert.isOk(
+				isUndefined(cursor) || cursor === null || isObject(cursor),
+				'query() cursor is undefined, null, or Object'
+			);
+
+			switch (operator) {
+			case 'equals':
+				assert.isOk(
+					isNonEmptyString(value) || isNumber(value),
+					'query() operator "equals" : value String or Number'
+				);
+				break;
+			case 'begins_with':
+				assert.isNonEmptyString(value, 'query() operator "begins_with" : value String');
+				break;
+			default:
+				assert.isOk(false, `query() operator "${operator}"`);
+			}
 
 			const key = IndexEntry.queryKey(scope, index, value);
 
