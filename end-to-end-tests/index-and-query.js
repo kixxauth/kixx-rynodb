@@ -3,7 +3,7 @@
 const Promise = require('bluebird');
 const Rynodb = require('../index');
 const {reportFullStackTrace} = require('kixx');
-const {assert, deepFreeze} = require('kixx/library');
+const {assert, clone, deepFreeze} = require('kixx/library');
 const tools = require('./tools');
 
 const TABLE_PREFIX = tools.TABLE_PREFIX;
@@ -99,7 +99,7 @@ tests.push(function queryByTag() {
 		assert.isEqual('byTag:foo', cursor._unique_key.S);
 		assert.isEqual('some_scope:byTag', cursor._scope_index_name.S);
 		assert.isEqual('foo', cursor._index_key.S);
-		assert.isEqual('some_scope:string:some-uuid-thingy-123-idx-2', cursor._subject_key.S);
+		assert.isEqual('some_scope:test_item:some-uuid-thingy-123-idx-2', cursor._subject_key.S);
 
 		const params = {
 			scope: 'some_scope',
@@ -133,7 +133,7 @@ tests.push(function queryByName() {
 		scope: 'some_scope',
 		index: 'byName',
 		operator: 'begins_with',
-		value: 'daff'
+		value: 'p'
 	};
 
 	return query(params).then((res) => {
@@ -145,11 +145,65 @@ tests.push(function queryByName() {
 		const {attributes} = item;
 
 		assert.isEqual(2, Object.keys(attributes).length);
-		assert.isEqual('Daffy Duck', attributes.name);
+		assert.isEqual('Porky Pig', attributes.name);
 
 		assert.isEqual(null, cursor);
 
 		return null;
+	});
+});
+
+tests.push(function updateAnItemAndQuery() {
+	debug('update item and query for it');
+
+	const updatedItem = clone(item1);
+	updatedItem.attributes.tags = ['baz'];
+
+	const txn = createTransaction();
+
+	return txn.updateOrCreateItem(updatedItem).then(() => {
+		const params = {
+			scope: 'some_scope',
+			index: 'byTag',
+			operator: 'equals',
+			value: 'bar'
+		};
+
+		return query(params).then((res) => {
+			const {items, cursor} = res;
+
+			assert.isEqual(0, items.length);
+			assert.isEqual(null, cursor);
+
+			return null;
+		});
+	});
+});
+
+tests.push(function deleteAnItemAndQuery() {
+	debug('delete item and query for it');
+
+	const txn = createTransaction();
+
+	const {scope, type, id} = item2;
+	const key = {scope, type, id};
+
+	return txn.deleteItem(key).then(() => {
+		const params = {
+			scope: 'some_scope',
+			index: 'byName',
+			operator: 'begins_with',
+			value: 'p'
+		};
+
+		return query(params).then((res) => {
+			const {items, cursor} = res;
+
+			assert.isEqual(0, items.length);
+			assert.isEqual(null, cursor);
+
+			return null;
+		});
 	});
 });
 
