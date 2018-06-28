@@ -49,8 +49,100 @@ module.exports = function (t) {
 			}).then(done);
 		});
 
-		t.it('raises the expected exception', () => {
+		t.it('rejects the expected exception', () => {
 			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#getEntity(): test error', error.message);
+		});
+	});
+
+	t.describe('with error in setEntity() during create', (t) => {
+		const emitter = new EventEmitter();
+
+		const dynamodb = DynamoDb.create({
+			emitter,
+			awsRegion,
+			awsAccessKey,
+			awsSecretKey,
+			tablePrefix
+		});
+
+		const txn = Transaction.create({dynamodb});
+
+		sinon.stub(dynamodb.client, '_request').callsFake(function (target) {
+			switch (target) {
+			case 'GetItem':
+				return Promise.resolve({});
+			case 'PutItem':
+				return Promise.reject(new Error('test error'));
+			default:
+				return Promise.reject(new Error(`unexpected _request() target: '${target}'`));
+			}
+		});
+
+		const object = {
+			scope: 'some_scope',
+			type: 'some_type',
+			id: 'some_id'
+		};
+
+		let error;
+
+		t.before(function (done) {
+			txn.updateOrCreateItem(object).then(function () {
+				throw new Error('should not have resolved');
+			}).catch(function (err) {
+				error = err;
+				return null;
+			}).then(done);
+		});
+
+		t.it('rejects with the expected exception', () => {
+			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#setEntity(): test error', error.message);
+		});
+	});
+
+	t.describe('with error in setEntity() during update', (t) => {
+		const emitter = new EventEmitter();
+
+		const dynamodb = DynamoDb.create({
+			emitter,
+			awsRegion,
+			awsAccessKey,
+			awsSecretKey,
+			tablePrefix
+		});
+
+		const txn = Transaction.create({dynamodb});
+
+		sinon.stub(dynamodb.client, '_request').callsFake(function (target) {
+			switch (target) {
+			case 'GetItem':
+				return Promise.resolve({entity: {}});
+			case 'PutItem':
+				return Promise.reject(new Error('test error'));
+			default:
+				return Promise.reject(new Error(`unexpected _request() target: '${target}'`));
+			}
+		});
+
+		const object = {
+			scope: 'some_scope',
+			type: 'some_type',
+			id: 'some_id'
+		};
+
+		let error;
+
+		t.before(function (done) {
+			txn.updateOrCreateItem(object).then(function () {
+				throw new Error('should not have resolved');
+			}).catch(function (err) {
+				error = err;
+				return null;
+			}).then(done);
+		});
+
+		t.it('rejects with the expected exception', () => {
+			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#setEntity(): test error', error.message);
 		});
 	});
 };
