@@ -94,6 +94,29 @@ module.exports = function (t) {
 			assert.isEqual('some_scope:some_type', Item._scope_type_key.S);
 			assert.isEqual('Foo', Item.title.S);
 		});
+
+		t.it('calls _request() to BatchWriteItem', () => {
+			const [target, options, params] = dynamodb.client._request.getCall(2).args;
+
+			assert.isEqual('BatchWriteItem', target);
+			assert.isOk(isObject(options));
+
+			const entries = params.RequestItems.ttt_index_entries;
+
+			assert.isEqual(1, entries.length);
+
+			const {Item} = entries[0].PutRequest;
+
+			assert.isEqual('some_id', Item._id.S);
+			assert.isEqual('some_scope', Item._scope.S);
+			assert.isEqual('some_type', Item._type.S);
+			assert.isEqual('Foo', Item.title.S);
+			assert.isEqual('byTitle', Item._index_name.S);
+			assert.isEqual('Foo', Item._index_key.S);
+			assert.isEqual('some_scope:some_type:some_id', Item._subject_key.S);
+			assert.isEqual('byTitle:Foo', Item._unique_key.S);
+			assert.isEqual('some_scope:byTitle', Item._scope_index_name.S);
+		});
 	});
 
 	t.describe('with error in getEntity()', (t) => {
