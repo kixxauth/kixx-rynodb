@@ -45,14 +45,13 @@ tests.push(function testUpdateItem() {
 		ReturnConsumedCapacity: 'INDEXES'
 	};
 
-	return client.request('PutItem', params).then((res) => {
-		console.log('test update item response', res);
+	return client.request('PutItem', params).then(() => {
+		assert.isOk(false, 'should not be executed');
+		return null;
 	}).catch((err) => {
-		console.log('test update item error', {
-			name: err.name,
-			code: err.code,
-			message: err.message
-		});
+		assert.isEqual('ConditionalCheckFailedException', err.name);
+		assert.isEqual('ConditionalCheckFailedException', err.code);
+		return null;
 	});
 });
 
@@ -66,7 +65,7 @@ tests.push(function testCreateItem() {
 		Item
 	};
 
-	return client.request('PutItem', params).then((res) => {
+	return client.request('PutItem', params).then(() => {
 		const params = {
 			TableName,
 			Item,
@@ -76,13 +75,12 @@ tests.push(function testCreateItem() {
 		};
 
 		return client.request('PutItem', params).then((res) => {
-			console.log('test create item response', res);
+			assert.isOk(false, 'should not be executed');
+			return null;
 		}).catch((err) => {
-			console.log('test create item error', {
-				name: err.name,
-				code: err.code,
-				message: err.message
-			});
+			assert.isEqual('ConditionalCheckFailedException', err.name);
+			assert.isEqual('ConditionalCheckFailedException', err.code);
+			return null;
 		});
 	});
 });
