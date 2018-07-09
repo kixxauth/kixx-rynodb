@@ -620,7 +620,7 @@ module.exports = function (t) {
 		});
 
 		t.it('rejects with the expected exception', () => {
-			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#setEntity(): test error', error.message);
+			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#createEntity(): test error', error.message);
 		});
 	});
 
@@ -666,7 +666,7 @@ module.exports = function (t) {
 		});
 
 		t.it('rejects with the expected exception', () => {
-			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#setEntity(): test error', error.message);
+			assert.isEqual('Error during Transaction#updateOrCreateItem(): Error in DynamoDB#updateEntity(): test error', error.message);
 		});
 	});
 
