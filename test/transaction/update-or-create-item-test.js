@@ -306,6 +306,8 @@ module.exports = function (t) {
 				}]});
 			case 'PutItem':
 				return Promise.resolve({});
+			case 'BatchWriteItem':
+				return Promise.resolve({UnprocessedItems: {}});
 			default:
 				return Promise.reject(new Error(`unexpected _request() target: '${target}'`));
 			}
@@ -328,7 +330,7 @@ module.exports = function (t) {
 		});
 
 		t.it('calls DynamoDbClient#_request() expected number of times', () => {
-			assert.isEqual(3, dynamodb.client._request.callCount);
+			assert.isEqual(4, dynamodb.client._request.callCount);
 		});
 
 		t.it('calls _request() to GetItem', () => {
@@ -379,6 +381,32 @@ module.exports = function (t) {
 			assert.isEqual('some_scope:some_type:some_id', ExpressionAttributeValues[':sk'].S);
 			assert.isEqual(null, ExclusiveStartKey);
 			assert.isEqual('#sk = :sk', KeyConditionExpression);
+		});
+
+		// Even if the indexes are the same, we still need to re-insert the index entries
+		// because the entity attributes may have been updated.
+		t.it('calls _request() to BatchWriteItem', () => {
+			const [target, options, params] = dynamodb.client._request.getCall(3).args;
+
+			assert.isEqual('BatchWriteItem', target);
+			assert.isOk(isObject(options));
+
+			const entries = params.RequestItems.ttt_index_entries;
+
+			// There is no delete request.
+			assert.isEqual(1, entries.length);
+
+			const {Item} = entries[0].PutRequest;
+
+			assert.isEqual('some_id', Item._id.S);
+			assert.isEqual('some_scope', Item._scope.S);
+			assert.isEqual('some_type', Item._type.S);
+			assert.isEqual('Foo', Item.title.S);
+			assert.isEqual('byTitle', Item._index_name.S);
+			assert.isEqual('Foo', Item._index_key.S);
+			assert.isEqual('some_scope:some_type:some_id', Item._subject_key.S);
+			assert.isEqual('byTitle:Foo', Item._unique_key.S);
+			assert.isEqual('some_scope:byTitle', Item._scope_index_name.S);
 		});
 	});
 
