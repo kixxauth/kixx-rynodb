@@ -1,6 +1,6 @@
 {
   "name": "kixx-rynodb",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "An enhanced Dynamodb store for Kixx applications",
   "main": "index.js",
   "scripts": {
