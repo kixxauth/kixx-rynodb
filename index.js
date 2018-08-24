@@ -159,7 +159,7 @@ exports.create = function create(options = {}) {
 
 		// args.scope - String
 		// args.index - String
-		// args.operator - String "equals" or "begins_with"
+		// args.operator - String "equals", "greater_than", "less_than" or "begins_with"
 		// args.value - String or Number
 		// args.cursor - DynamoDB LastEvaluatedKey Object
 		// args.limit - Integer
@@ -176,6 +176,18 @@ exports.create = function create(options = {}) {
 				assert.isOk(
 					isNonEmptyString(value) || isNumber(value),
 					'query() operator "equals" : value String or Number'
+				);
+				break;
+			case 'greater_than':
+				assert.isOk(
+					isNonEmptyString(value) || isNumber(value),
+					'query() operator "greater_than" : value String or Number'
+				);
+				break;
+			case 'less_than':
+				assert.isOk(
+					isNonEmptyString(value) || isNumber(value),
+					'query() operator "greater_than" : value String or Number'
 				);
 				break;
 			case 'begins_with':
