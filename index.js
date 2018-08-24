@@ -129,14 +129,15 @@ exports.create = function create(options = {}) {
 		// args.type - String
 		// args.cursor - DynamoDB LastEvaluatedKey Object
 		// args.limit - Integer
+		// args.backward - Boolean. Defaults to `false`.
 		itemsByType(args, options = {}) {
-			const {scope, type, cursor, limit} = args;
+			const {scope, type, cursor, limit, backward} = args;
 			assert.isNonEmptyString(scope, 'itemsByType() scope');
 			assert.isNonEmptyString(type, 'itemsByType() type');
 
 			const key = Entity.createKey(scope, type)._scope_type_key;
 
-			const params = {key, cursor, limit};
+			const params = {key, cursor, limit, backward};
 
 			return dynamodb.scanEntities(params, options)
 				.then((res) => {
