@@ -17,19 +17,6 @@
     "url": "https://github.com/kixxauth/kixx-rynodb/issues"
   },
   "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
-  "dependencies": {},
-  "peerDependencies": {
-    "bluebird": "^3.5.3",
-    "kixx": "^1.0.0",
-    "ramda": "^0.26.0"
-  },
   "devDependencies": {
-    "bluebird": "^3.5.3",
-    "debug": "4.1.1",
-    "eslint": "5.13.0",
-    "kixx": "^1.0.0",
-    "kixx-test-node": "1.3.0",
-    "ramda": "^0.26.0",
-    "sinon": "7.2.3"
   }
 }
