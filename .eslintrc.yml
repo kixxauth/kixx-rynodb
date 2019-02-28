@@ -1,29 +1,31 @@
+env:
+  es6: true
+  node: true
 extends: 'eslint:recommended'
 parserOptions:
-  ecmaVersion: 2017
-env:
-  node: true
-globals:
-  Symbol: true
+  ecmaVersion: 2016
 rules:
   strict:
     - error
   indent:
     - error
     - tab
+    -
+      SwitchCase: 1
   linebreak-style:
     - error
     - unix
-  semi:
-    - error
-    - always
   quotes:
     - error
     - single
     -
-      allowTemplateLiterals: true
-  no-multi-spaces:
+      avoidEscape: true
+  semi:
     - error
+    - always
+  comma-dangle:
+    - error
+    - never
   no-var:
     - error
   prefer-const:
@@ -32,6 +34,7 @@ rules:
     - error
     -
       args: none
+      varsIgnorePattern: _
   no-use-before-define:
     - error
     -
@@ -39,20 +42,9 @@ rules:
       classes: false
   no-caller:
     - error
-  curly:
-    - error
-    - multi-line
-  comma-dangle:
-    - error
-    - never
-  arrow-parens:
-    - error
-    - always
   no-shadow-restricted-names:
     - error
   for-direction:
-    - error
-  no-prototype-builtins:
     - error
   no-template-curly-in-string:
     - error
@@ -62,16 +54,36 @@ rules:
     - error
   radix:
     - error
-  no-mixed-requires:
-    - error
-    -
-      grouping: true
-      allowCall: true
   no-process-env:
     - error
   no-buffer-constructor:
     - error
   no-path-concat:
+    - error
+  curly:
+    - error
+    - multi-line
+  arrow-parens:
+    - error
+    - always
+  block-spacing:
+    - error
+  space-infix-ops:
+    - error
+  space-unary-ops:
+    - error
+    -
+      words: true
+      nonwords: false
+  no-multi-spaces:
+    - error
+  object-curly-spacing:
+    - error
+    - always
+  array-bracket-spacing:
+    - error
+    - always
+  no-trailing-spaces:
     - error
   no-console:
     - error
@@ -81,4 +93,3 @@ rules:
       location: anywhere
   eol-last:
     - error
-

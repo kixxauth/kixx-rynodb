@@ -1,10 +1,10 @@
 {
   "name": "kixx-rynodb",
-  "version": "2.3.0",
-  "description": "An enhanced Dynamodb store for Kixx applications",
+  "version": "3.0.0",
+  "description": "An enhanced Node.js layer on a DynamoDB store",
   "main": "index.js",
   "scripts": {
-    "test": "eslint ./ && kixx-test-node",
+    "test": "eslint ./",
     "lint": "eslint ./"
   },
   "author": "Kris Walker (www.kixx.name)",
@@ -18,5 +18,6 @@
   },
   "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
   "devDependencies": {
+    "eslint": "5.14.1"
   }
 }
