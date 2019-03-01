@@ -1,31 +1,6 @@
 Kixx RynoDB
 ===========
-An enhanced Dynamodb store for [Kixx](https://github.com/kixxauth/kixx) applications.
-
-## End to End Tests
-The end to end tests are designed to test features and functionality of the DynamoDB client and an actual AWS DynamoDB endpoint. Each test in the `end-to-end-tests/` folder can be run independently by running:
-
-`node end-to-end-tests/[TEST_FILE].js`
-
-Or, all the tests can be run with:
-
-`node end-to-end-tests/all.js`
-
-The expected AWS credentials will need to be set:
-
-```
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
-export AWS_REGION=pick-a-region
-```
-
-And, you'll want to set a useful DEBUG setting, otherwise there will be no console output:
-
-```
-export DEBUG='kixx-rynodb:*'
-```
-
-__!GOTCHA:__ A full set of tables will be set up by the setup-schema test using the table prefix "ttt". These tables will need to be removed before the next full test run.
+An enhanced Node.js layer on an AWS DynamoDB store.
 
 ## DynamoDB Schema
 
@@ -74,7 +49,7 @@ __Record__
     _scope: STRING,
     _type: STRING,
     _id: STRING,
-    _index_name: STRING, // Also the name of the map function.
+    _index_name: STRING, // Also the name of the map function which creates this index.
     _index_key: STRING, // The index value created by the map function.
     _subject_key: `${scope}:${type}:${id}`,
     _unique_key: `${index_name}:${index_key}`,
@@ -120,6 +95,25 @@ __Remove some relationships from subject:__ Use subject scope, type, id and pred
 __Add some relationships on subject:__ Use subject scope, type, id and predicate key to query(subject_key).begins_with(predicate) `relationship_entries` table. Concat new entries, then dedupe them using the returned subject_key and predicate_key. Then, use batchWriteItem() to add new records to `relationship_entries`.
 
 __Replace relationships on subject:__ Use subject scope, type, id and predicate key to query(subject_key).begins_with(predicate) `relationship_entries` table. Then, use batchWriteItem() to delete records from `relationship_entries` using the returned subject_key and predicate_key. Finally, use batchWriteItem() to add all the new records to `relationship_entries`.
+
+## End to End Tests
+The end to end tests are designed to test features and functionality of the DynamoDB client and an actual AWS DynamoDB endpoint. Each test in the `end-to-end-tests/` folder can be run independently by running:
+
+`node end-to-end-tests/[TEST_FILE].js`
+
+Or, all the tests can be run with:
+
+`node end-to-end-tests/all.js`
+
+The expected AWS credentials will need to be set:
+
+```
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_REGION=pick-a-region
+```
+
+__!GOTCHA:__ A full set of tables will be set up by the setup-schema test using the table prefix "ttt". These tables will need to be removed before the next full test run.
 
 Copyright and License
 ---------------------
