@@ -3,11 +3,8 @@ logs
 *.log
 npm-debug.log*
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # node-waf configuration
 .lock-wscript
@@ -29,7 +26,4 @@ node_modules/
 
 # Output of 'npm pack'
 *.tgz
-
-# dotenv environment variables file
-.env
 
