@@ -13,11 +13,14 @@
     "type": "git",
     "url": "git+https://github.com/kixxauth/kixx-rynodb.git"
   },
+  "dependencies": {
+    "kixx-assert": "1.0.6"
+  },
+  "devDependencies": {
+    "eslint": "6.8.0"
+  },
   "bugs": {
     "url": "https://github.com/kixxauth/kixx-rynodb/issues"
   },
-  "homepage": "https://github.com/kixxauth/kixx-rynodb#readme",
-  "devDependencies": {
-    "eslint": "6.8.0"
-  }
+  "homepage": "https://github.com/kixxauth/kixx-rynodb#readme"
 }
